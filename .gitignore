@@ -1,0 +1,36 @@
+# Unity generated folders
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Mm]emoryCaptures/
+
+# Auto-generated Visual Studio files
+.vs/
+*.csproj
+*.sln
+*.suo
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Unity Cloud Build
+UnityConnectSettings.asset
+
+# Asset Store
+/Assets/AssetStoreTools*
+
+# Cache & package manager
+/Packages/packages-lock.json
+#/Packages/manifest.json # Only ignore if you want Unity to fetch packages automatically, otherwise keep for versioning
+
+# Ignore build outputs but keep configuration
+/[Bb]uilds/
