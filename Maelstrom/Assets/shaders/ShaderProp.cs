@@ -34,16 +34,7 @@ namespace Maelstrom.Unity
         [SerializeField] private ShaderProperty[] shaderProperties = new ShaderProperty[0];
 
         [Header("Target Settings")]
-        [SerializeField] private bool applyOnStart = true;
         [SerializeField] private bool applyInEditMode = true;
-
-        private void Start()
-        {
-            if (applyOnStart)
-            {
-                ApplyShaderProperties();
-            }
-        }
 
         private void OnValidate()
         {
@@ -53,14 +44,6 @@ namespace Maelstrom.Unity
             }
         }
 
-        private void Update()
-        {
-            // // Only apply in edit mode if enabled
-            // if (applyInEditMode && !Application.isPlaying)
-            // {
-            //     ApplyShaderProperties();
-            // }
-        }
 
         /// <summary>
         /// Apply all configured shader properties to the material of this GameObject

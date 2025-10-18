@@ -176,7 +176,6 @@ GameObject:
   m_Component:
   - component: {fileID: 287033613}
   - component: {fileID: 287033616}
-  - component: {fileID: 287033615}
   - component: {fileID: 287033614}
   m_Layer: 0
   m_Name: Second Camera
@@ -248,14 +247,6 @@ MonoBehaviour:
     m_VarianceClampScale: 0.9
     m_ContrastAdaptiveSharpening: 0
   m_Version: 2
---- !u!81 &287033615
-AudioListener:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 287033612}
-  m_Enabled: 1
 --- !u!20 &287033616
 Camera:
   m_ObjectHideFlags: 0
@@ -621,7 +612,7 @@ MonoBehaviour:
   screenSize: {x: 1920, y: 1080}
   loopDuration: 600
   pointPool: {fileID: 268919027}
-  maxActiveObjects: 1000
+  maxActiveObjects: 100000
   dataLoader: {fileID: 337801906}
   showDebugInfo: 1
   debugUpdateInterval: 5

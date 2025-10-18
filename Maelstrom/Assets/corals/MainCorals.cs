@@ -21,13 +21,26 @@ namespace Maelstrom.Unity
         // Timing
         private float _currentTime = 0.0f;
         private CoralDataPoint[] _data;
-
-        private void Start()
+        private void Awake()
         {
+
             positive.SetActive(false);
             negative.SetActive(false);
             neutral.SetActive(false);
 
+            if (SceneManager.GetActiveScene().name != "CoralsScene")
+            {
+                return;
+            }
+
+            positive.SetActive(true);
+            negative.SetActive(true);
+            neutral.SetActive(true);
+
+        }
+
+        private void Start()
+        {
             if (SceneManager.GetActiveScene().name != "CoralsScene")
             {
                 return;
@@ -48,9 +61,6 @@ namespace Maelstrom.Unity
                 Debug.Log("Waiting for corals data to load...");
             }
 
-            positive.SetActive(true);
-            negative.SetActive(true);
-            neutral.SetActive(true);
         }
 
         private void Update()

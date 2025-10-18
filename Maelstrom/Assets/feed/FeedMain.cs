@@ -30,8 +30,13 @@ namespace Maelstrom.Unity
         private int _currentDataIndex = 0;
         private float _normalizedDisplayDuration; // One week in normalized data space
         private Queue<DisplayObject> _activeObjects = new Queue<DisplayObject>();
+        private Queue<DisplayObject> _inactiveObjects = new Queue<DisplayObject>();
         private System.Random _random = new System.Random();
         private DateTime _currentDisplayedDate = DateTime.MinValue;
+
+        // Object recycling
+        private List<DisplayObject> _displayObjectPool = new List<DisplayObject>();
+        private int _nextPoolIndex = 0;
 
         // Timing
         private float _currentTime = 0.0f;
@@ -87,15 +92,72 @@ namespace Maelstrom.Unity
             _data = dataLoader.Data;
             _normalizedDisplayDuration = dataLoader.GetNormalizedDuration(TimeSpan.FromDays(7));
 
+            // Pre-create DisplayObject pool
+            InitializeDisplayObjectPool();
+
             Debug.Log($"Initialized with {_data.Length} data points");
             Debug.Log($"One week in normalized data space: {_normalizedDisplayDuration:F6}");
+            Debug.Log($"DisplayObject pool initialized with {_displayObjectPool.Count} objects");
+        }
+
+        private void InitializeDisplayObjectPool()
+        {
+            // Create a pool of DisplayObjects based on maxActiveObjects
+            int poolSize = Math.Max(maxActiveObjects, 1000); // At least 1000 objects
+
+            for (int i = 0; i < poolSize; i++)
+            {
+                GameObject prefab = pointPool.GetOne();
+                if (prefab != null)
+                {
+                    DisplayObject displayObject = new DisplayObject(prefab);
+                    displayObject.SetEnabled(false); // Start inactive
+                    _displayObjectPool.Add(displayObject);
+                }
+            }
+
+            Debug.Log($"Created {_displayObjectPool.Count} DisplayObjects in pool");
         }
 
         private void ProcessDataAndManageObjects()
         {
             float normalizedCurrentTime = _currentTime / loopDuration;
 
-            // Add objects
+            // First, recycle objects that are too old
+            RecycleOldObjects(normalizedCurrentTime);
+
+            // Then, activate objects for new data points
+            ActivateObjectsForNewData(normalizedCurrentTime);
+
+            // Update all active objects
+            UpdateActiveObjects();
+        }
+
+        private void RecycleOldObjects(float normalizedCurrentTime)
+        {
+            // Move old objects from active to inactive queue
+            while (_activeObjects.Count > 0)
+            {
+                DisplayObject obj = _activeObjects.Peek();
+                float objectAge = normalizedCurrentTime - obj.creationTime;
+
+                if (objectAge >= _normalizedDisplayDuration)
+                {
+                    _activeObjects.Dequeue();
+                    RecycleDisplayObject(obj);
+                }
+                else
+                {
+                    // Since data is ordered, if this object is not old enough, 
+                    // none of the remaining objects will be either
+                    break;
+                }
+            }
+        }
+
+        private void ActivateObjectsForNewData(float normalizedCurrentTime)
+        {
+            // Activate objects for new data points
             while (_currentDataIndex < _data.Length && _activeObjects.Count < maxActiveObjects)
             {
                 FeedDataPoint dataPoint = _data[_currentDataIndex];
@@ -103,18 +165,12 @@ namespace Maelstrom.Unity
                 // Check if this data point should be displayed at current time
                 if (dataPoint.normalizedDate <= normalizedCurrentTime)
                 {
-                    DisplayObject displayObject = CreateRandomDisplayObject(dataPoint);
-                    if (displayObject == null)
+                    DisplayObject displayObject = GetRecycledDisplayObject(dataPoint);
+                    if (displayObject != null)
                     {
-                        throw new System.Exception("Failed to create display object");
+                        _activeObjects.Enqueue(displayObject);
+                        _currentDisplayedDate = dataPoint.date;
                     }
-
-                    _activeObjects.Enqueue(displayObject);
-
-                    // Update current displayed date
-                    _currentDisplayedDate = dataPoint.date;
-
-
                     _currentDataIndex++;
                 }
                 else
@@ -129,45 +185,60 @@ namespace Maelstrom.Unity
             {
                 _currentDataIndex = 0;
             }
+        }
 
-            // Remove objects
-            while (_activeObjects.Count > 0)
-            {
-                DisplayObject obj = _activeObjects.Peek();
-                float objectAge = normalizedCurrentTime - obj.creationTime;
-                if (objectAge >= _normalizedDisplayDuration)
-                {
-                    _activeObjects.Dequeue();
-                    ReturnDisplayObject(obj);
-                }
-                else
-                {
-                    // Since data is ordered, if this object is not old enough, 
-                    // none of the remaining objects will be either
-                    break;
-                }
-            }
-
-            //uupdate active objects
+        private void UpdateActiveObjects()
+        {
+            // Update all active objects
             foreach (var obj in _activeObjects)
             {
-                obj.Update(Time.deltaTime);
+                if (obj != null)
+                {
+                    obj.Update(Time.deltaTime);
+                }
             }
         }
 
-        private DisplayObject CreateRandomDisplayObject(FeedDataPoint dataPoint)
+        private DisplayObject GetRecycledDisplayObject(FeedDataPoint dataPoint)
         {
-            // Get a GameObject from the pool
-            GameObject prefab = pointPool.GetOne();
-            if (prefab == null)
+            // Try to get an inactive object from the pool
+            DisplayObject displayObject = null;
+
+            // First, try to get from inactive queue
+            if (_inactiveObjects.Count > 0)
             {
-                Debug.LogWarning("Object pool exhausted, cannot create new DisplayObject");
+                displayObject = _inactiveObjects.Dequeue();
+            }
+            else
+            {
+                // If no inactive objects, find an unused object from the pool
+                for (int i = 0; i < _displayObjectPool.Count; i++)
+                {
+                    int index = (_nextPoolIndex + i) % _displayObjectPool.Count;
+                    DisplayObject obj = _displayObjectPool[index];
+
+                    if (!obj.IsEnabled)
+                    {
+                        displayObject = obj;
+                        _nextPoolIndex = (index + 1) % _displayObjectPool.Count;
+                        break;
+                    }
+                }
+            }
+
+            if (displayObject == null)
+            {
+                Debug.LogWarning("No available DisplayObjects in pool");
                 return null;
             }
 
-            // Get or create DisplayObject component
-            DisplayObject displayObject = new DisplayObject(prefab);
+            // Configure the recycled object
+            ConfigureDisplayObject(displayObject, dataPoint);
+            return displayObject;
+        }
 
+        private void ConfigureDisplayObject(DisplayObject displayObject, FeedDataPoint dataPoint)
+        {
             // Activate the DisplayObject
             displayObject.SetEnabled(true);
 
@@ -191,8 +262,21 @@ namespace Maelstrom.Unity
             // Initialize the DisplayObject
             displayObject.Initialize(position, velocity, screenSize, pixelSize);
             displayObject.creationTime = _currentTime / loopDuration; // Store normalized creation time
+        }
 
-            return displayObject;
+        private void RecycleDisplayObject(DisplayObject displayObject)
+        {
+            if (displayObject != null)
+            {
+                // Reset the DisplayObject for reuse
+                displayObject.Reset();
+
+                // Deactivate the DisplayObject
+                displayObject.SetEnabled(false);
+
+                // Add to inactive queue for quick reuse
+                _inactiveObjects.Enqueue(displayObject);
+            }
         }
 
         private void ReturnDisplayObject(DisplayObject displayObject)
@@ -215,6 +299,11 @@ namespace Maelstrom.Unity
             float normalizedCurrentTime = _currentTime / loopDuration;
             Debug.Log($"Time: {_currentTime:F1}s, Normalized: {normalizedCurrentTime:F6}, " +
                      $"Active Objects: {_activeObjects.Count}, Data Index: {_currentDataIndex}/{_data.Length}");
+
+            // Log recycling stats
+            Debug.Log($"Recycling Stats - Active: {_activeObjects.Count}, " +
+                     $"Inactive Queue: {_inactiveObjects.Count}, " +
+                     $"Pool Size: {_displayObjectPool.Count}");
 
             if (_currentDataIndex < _data.Length)
             {
@@ -256,6 +345,16 @@ namespace Maelstrom.Unity
             return _currentDisplayedDate;
         }
 
+        public int GetInactiveObjectCount()
+        {
+            return _inactiveObjects.Count;
+        }
+
+        public int GetDisplayObjectPoolSize()
+        {
+            return _displayObjectPool.Count;
+        }
+
         private void OnDestroy()
         {
             // Clean up all active objects
@@ -267,6 +366,28 @@ namespace Maelstrom.Unity
                     ReturnDisplayObject(obj);
                 }
             }
+
+            // Clean up inactive objects
+            while (_inactiveObjects.Count > 0)
+            {
+                DisplayObject obj = _inactiveObjects.Dequeue();
+                if (obj != null)
+                {
+                    ReturnDisplayObject(obj);
+                }
+            }
+
+            // Clean up display object pool
+            foreach (var obj in _displayObjectPool)
+            {
+                if (obj != null)
+                {
+                    ReturnDisplayObject(obj);
+                }
+            }
+            _displayObjectPool.Clear();
+
+            Debug.Log($"[FEED_MAIN] Cleanup completed - Pool size: {_displayObjectPool.Count}");
         }
     }
 }
