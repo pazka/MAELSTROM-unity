@@ -118,11 +118,16 @@ Shader "Custom/Caustic"
 
                 v += voronoi(squareUv, t * 2.0, 0.5 + amplitude, 2.5 - sizeDistortion + amplitude);
                 amplitude = amplitude/2;
-                v += voronoi(squareUv, t * 2.0, 0.0 + amplitude, 4.0 - sizeDistortion + amplitude);
+              //  v += voronoi(squareUv, t * 2.0, 0.0 + amplitude, 4.0 - sizeDistortion + amplitude);
 
-                float3 col = v * float3(1-_Maelstrom,1-_Maelstrom, 1.0);
-                float alpha = col.z * _Opacity;
-                col += (1.0 - v) * float3(0.0, 0.0, _Maelstrom);
+                float3 negColor = float3(1-_Maelstrom,1-_Maelstrom, 1-_Maelstrom);
+                float3 happyColor = float3(0.3,0.3, 0.8);
+
+                //mix the colors based on the seed
+                float3 col = v * lerp(negColor,happyColor , _Seed);
+
+                float alpha = _Opacity * (col.x+col.y+col.z)/3;
+                col += (1.0 - v) * float3(0.0, 0.0, 0.0);
 
                 return float4(col, alpha);
             }
