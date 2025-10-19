@@ -51,8 +51,8 @@ namespace Maelstrom.Unity
 
             // Random position on screen
             Vector2 position = new Vector2(
-                UnityEngine.Random.Range(0, screenSize.x),
-                UnityEngine.Random.Range(0, screenSize.y)
+                UnityEngine.Random.Range(-screenSize.x / 2, screenSize.x),
+                UnityEngine.Random.Range(-screenSize.y / 2, screenSize.y)
             );
             gameObject.transform.position = position;
 

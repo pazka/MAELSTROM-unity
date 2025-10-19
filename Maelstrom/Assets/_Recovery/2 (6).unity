@@ -402,7 +402,7 @@ MonoBehaviour:
   shaderProperties:
   - propertyName: _Radius
     type: 0
-    floatValue: 0.5
+    floatValue: 2.92
     vector2Value: {x: 0, y: 0}
     vector3Value: {x: 0, y: 0, z: 0}
     vector4Value: {x: 0, y: 0, z: 0, w: 0}
