@@ -24,12 +24,12 @@ namespace Maelstrom.Unity
         public string screen_name;
         public int nb_tweets;
         public int followers_count;
+        public int nb_accounts_others;
         public float normalizedNbTweets;
         public float normalizedFollowersCount;
         public float normalizedDate;
-        public float dayNormPos; // normalized positive sentiment
-        public float dayNormNeu; // normalized neutral sentiment  
-        public float dayNormNeg; // normalized negative sentiment
+        public float daynormalizedNbTweets;
+        public float daynormalizedFollowersCount;
         public bool isAggregated; // only for the account named "##OTHERS##"
     }
     public struct GhostNetDataBound
@@ -70,6 +70,7 @@ namespace Maelstrom.Unity
                 Debug.LogError("CSV file is not assigned!");
                 return;
             }
+            Debug.Log("Loading ghostNetData");
 
             string[] lines = csvFile.text.Split('\n');
             List<GhostNetDataPoint> dataList = new List<GhostNetDataPoint>();
@@ -93,6 +94,7 @@ namespace Maelstrom.Unity
 
                 if (!int.TryParse(fields[2].Trim('"'), out int nbTweets)) continue;
                 if (!int.TryParse(fields[3].Trim('"'), out int followersCount)) continue;
+                if (!int.TryParse(fields[4].Trim('"'), out int nbAccountsOthers)) continue;
 
                 GhostNetDataPoint dataPoint = new GhostNetDataPoint
                 {
@@ -100,6 +102,7 @@ namespace Maelstrom.Unity
                     screen_name = screenName,
                     nb_tweets = nbTweets,
                     followers_count = followersCount,
+                    nb_accounts_others = nbAccountsOthers,
                     isAggregated = screenName == "##OTHERS##"
                 };
 
@@ -161,50 +164,29 @@ namespace Maelstrom.Unity
                 }
                 int dayEndIndex = i;
 
-                // Calculate min/max ratios for this day only once
-                float minRatio = float.MaxValue;
-                float maxRatio = float.MinValue;
-
+                // Calculate min/max teets count and follower count for this day only once
+                float maxDayTweets = 0;
+                float minDayTweets = 0;
+                float maxDayFollowers = 0;
+                float minDayFollowers = 0;
                 for (int j = dayStartIndex; j < dayEndIndex; j++)
                 {
-                    float ratio = _data[j].followers_count > 0 ?
-                        (float)_data[j].nb_tweets / _data[j].followers_count : 0;
-
-                    if (ratio < minRatio) minRatio = ratio;
-                    if (ratio > maxRatio) maxRatio = ratio;
+                    if (_data[j].nb_tweets > maxDayTweets) maxDayTweets = _data[j].nb_tweets;
+                    if (_data[j].nb_tweets < minDayTweets) minDayTweets = _data[j].nb_tweets;
+                    if (_data[j].followers_count > maxDayFollowers) maxDayFollowers = _data[j].followers_count;
+                    if (_data[j].followers_count < minDayFollowers) minDayFollowers = _data[j].followers_count;
                 }
 
                 // Normalize all data points for this day
                 for (int j = dayStartIndex; j < dayEndIndex; j++)
                 {
-                    // Calculate sentiment values based on tweet count and followers
-                    float tweetToFollowerRatio = _data[j].followers_count > 0 ?
-                        (float)_data[j].nb_tweets / _data[j].followers_count : 0;
+                    //normalization for the day
+                    _data[j].daynormalizedNbTweets = maxDayTweets > 0 ?
+                        (float)(_data[j].nb_tweets - minDayTweets) / (maxDayTweets - minDayTweets) : 0;
+                    _data[j].daynormalizedFollowersCount = maxDayFollowers > 0 ?
+                        (float)(_data[j].followers_count - minDayFollowers) / (maxDayFollowers - minDayFollowers) : 0;
 
-                    float normalizedRatio = maxRatio > minRatio ?
-                        (tweetToFollowerRatio - minRatio) / (maxRatio - minRatio) : 0.5f;
-
-                    // Assign sentiment values
-                    if (normalizedRatio < 0.3f)
-                    {
-                        _data[j].dayNormPos = 1.0f - normalizedRatio / 0.3f;
-                        _data[j].dayNormNeu = normalizedRatio / 0.3f;
-                        _data[j].dayNormNeg = 0.0f;
-                    }
-                    else if (normalizedRatio < 0.7f)
-                    {
-                        _data[j].dayNormPos = 0.0f;
-                        _data[j].dayNormNeu = 1.0f;
-                        _data[j].dayNormNeg = 0.0f;
-                    }
-                    else
-                    {
-                        _data[j].dayNormPos = 0.0f;
-                        _data[j].dayNormNeu = (1.0f - normalizedRatio) / 0.3f;
-                        _data[j].dayNormNeg = (normalizedRatio - 0.7f) / 0.3f;
-                    }
-
-                    // Global normalization
+                    //  normalization given the entire data set
                     _data[j].normalizedNbTweets = tweetsRange > 0 ?
                         (float)(_data[j].nb_tweets - _dataBounds.Min.nb_tweets) / tweetsRange : 0;
                     _data[j].normalizedFollowersCount = followersRange > 0 ?

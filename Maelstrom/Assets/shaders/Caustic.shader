@@ -12,7 +12,7 @@ Shader "Custom/Caustic"
     SubShader 
     {
         Tags { "RenderType"="Transparent" "Queue"="Transparent" "RenderPipeline"="UniversalPipeline" }
-        Blend SrcAlpha OneMinusSrcAlpha
+        Blend SrcAlpha DstAlpha
         ZWrite Off
 
         Pass

@@ -69,7 +69,7 @@ namespace Maelstrom.Unity
             // No available objects, create new one if under max limit
             if (_allObjects.Count < maxPoolSize)
             {
-                Debug.Log($"Creating new GhostNet object, total count: {_allObjects.Count}");
+
                 GameObject newObj = CreateNewObject();
                 return newObj;
             }

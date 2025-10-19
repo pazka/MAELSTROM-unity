@@ -102,7 +102,7 @@ namespace Maelstrom.Unity
 
                 try
                 {
-                    Debug.Log($"Applying property {prop.type} {prop.propertyName},  {prop.floatValue}");
+                    //   Debug.Log($"Applying property {prop.type} {prop.propertyName},  {prop.floatValue}");
                     switch (prop.type)
                     {
                         case PropertyType.Float:

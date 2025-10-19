@@ -3,12 +3,13 @@ Shader "Custom/Circle"
     Properties
     {
         _MainTex("Sprite Texture", 2D) = "white" {} // required for SpriteRenderer
+        _Radius("Radius", Float) = 0
     }
 
     SubShader
     {
         Tags { "RenderType" = "Transparent" "Queue" = "Transparent" "RenderPipeline" = "UniversalPipeline" }
-        Blend SrcAlpha OneMinusSrcAlpha
+        Blend SrcAlpha DstAlpha
         ZWrite Off
 
         Pass
@@ -33,6 +34,10 @@ Shader "Custom/Circle"
 
             TEXTURE2D(_MainTex);
             SAMPLER(sampler_MainTex);
+            
+            CBUFFER_START(UnityPerMaterial)
+                float _Radius;
+            CBUFFER_END
 
             Varyings vert(Attributes IN)
             {

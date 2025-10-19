@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using System;
 using System.Collections.Generic;
+// GhostNetDisplayObjectPool is a separate class for managing object pooling
 
 namespace Maelstrom.Unity
 {
@@ -17,7 +18,7 @@ namespace Maelstrom.Unity
 
         [Header("Object Pool Settings")]
         [SerializeField] private GhostNetPointPool ghostNetPool;
-        [SerializeField] private int maxActiveObjects = 1000;
+        [SerializeField] private GhostNetDisplayObjectPool displayObjectPool;
 
         [Header("Data Settings")]
         [SerializeField] private GhostNetDataLoader dataLoader;
@@ -30,14 +31,8 @@ namespace Maelstrom.Unity
         private GhostNetDataPoint[] _data;
         private int _currentDataIndex = 0;
         private float _normalizedDisplayDuration; // One day in normalized data space
-        private Queue<GhostNetDisplayObject> _activeObjects = new Queue<GhostNetDisplayObject>();
-        private Queue<GhostNetDisplayObject> _inactiveObjects = new Queue<GhostNetDisplayObject>();
         private System.Random _random = new System.Random();
         private DateTime _currentDisplayedDate = DateTime.MinValue;
-
-        // Object recycling
-        private List<GhostNetDisplayObject> _displayObjectPool = new List<GhostNetDisplayObject>();
-        private int _nextPoolIndex = 0;
 
         // Timing
         private float _currentTime = 0.0f;
@@ -90,87 +85,46 @@ namespace Maelstrom.Unity
         private void InitializeData()
         {
             _data = dataLoader.Data;
-            _normalizedDisplayDuration = dataLoader.GetNormalizedDuration(TimeSpan.FromDays(1));
+            _normalizedDisplayDuration = dataLoader.GetNormalizedDuration(TimeSpan.FromDays(2));
 
-            // Pre-create DisplayObject pool
-            InitializeDisplayObjectPool();
+            // Initialize DisplayObject pool
+            displayObjectPool.Initialize(ghostNetPool, screenSize);
 
             Debug.Log($"Initialized ghostNet with {_data.Length} data points");
             Debug.Log($"One day in normalized data space: {_normalizedDisplayDuration:F6}");
-            Debug.Log($"DisplayObject pool initialized with {_displayObjectPool.Count} objects");
+            Debug.Log($"DisplayObject pool initialized with {displayObjectPool.GetPoolSize()} objects");
         }
 
-        private void InitializeDisplayObjectPool()
-        {
-            // Create a pool of DisplayObjects based on maxActiveObjects
-            int poolSize = Math.Max(maxActiveObjects, 1000); // At least 1000 objects
-
-            for (int i = 0; i < poolSize; i++)
-            {
-                GameObject prefab = ghostNetPool.GetOne();
-                if (prefab != null)
-                {
-                    GhostNetDisplayObject displayObject = new GhostNetDisplayObject(prefab);
-                    displayObject.SetEnabled(false); // Start inactive
-                    _displayObjectPool.Add(displayObject);
-                }
-            }
-
-            Debug.Log($"Created {_displayObjectPool.Count} GhostNetDisplayObjects in pool");
-        }
 
         private void ProcessDataAndManageObjects()
         {
             float normalizedCurrentTime = _currentTime / loopDuration;
 
             // First, recycle objects that are too old
-            RecycleOldObjects(normalizedCurrentTime);
+            displayObjectPool.RecycleOldObjects(normalizedCurrentTime, _normalizedDisplayDuration);
 
             // Then, activate objects for new data points
             ActivateObjectsForNewData(normalizedCurrentTime);
 
             // Update all active objects
-            UpdateActiveObjects();
+            displayObjectPool.UpdateActiveObjects();
         }
 
-        private void RecycleOldObjects(float normalizedCurrentTime)
-        {
-            // Move old objects from active to inactive queue
-            while (_activeObjects.Count > 0)
-            {
-                GhostNetDisplayObject obj = _activeObjects.Peek();
-                float objectAge = normalizedCurrentTime - obj.creationTime;
 
-                if (objectAge >= _normalizedDisplayDuration)
-                {
-                    _activeObjects.Dequeue();
-                    RecycleDisplayObject(obj);
-                }
-                else
-                {
-                    // Since data is ordered, if this object is not old enough, 
-                    // none of the remaining objects will be either
-                    break;
-                }
-            }
-        }
 
         private void ActivateObjectsForNewData(float normalizedCurrentTime)
         {
             // Activate objects for new data points
-            while (_currentDataIndex < _data.Length && _activeObjects.Count < maxActiveObjects)
+            while (_currentDataIndex < _data.Length)
             {
                 GhostNetDataPoint dataPoint = _data[_currentDataIndex];
 
                 // Check if this data point should be displayed at current time
                 if (dataPoint.normalizedDate <= normalizedCurrentTime)
                 {
-                    GhostNetDisplayObject displayObject = GetRecycledDisplayObject(dataPoint);
-                    if (displayObject != null)
-                    {
-                        _activeObjects.Enqueue(displayObject);
-                        _currentDisplayedDate = dataPoint.date;
-                    }
+                    // Let the pool handle all activation logic
+                    displayObjectPool.ActivateDataPoint(dataPoint, normalizedCurrentTime);
+                    _currentDisplayedDate = dataPoint.date;
                     _currentDataIndex++;
                 }
                 else
@@ -187,119 +141,17 @@ namespace Maelstrom.Unity
             }
         }
 
-        private void UpdateActiveObjects()
-        {
-            // Update all active objects
-            foreach (var obj in _activeObjects)
-            {
-                if (obj != null)
-                {
-                    obj.Update(Time.deltaTime);
-                }
-            }
-        }
-
-        private GhostNetDisplayObject GetRecycledDisplayObject(GhostNetDataPoint dataPoint)
-        {
-            // Try to get an inactive object from the pool
-            GhostNetDisplayObject displayObject = null;
-
-            // First, try to get from inactive queue
-            if (_inactiveObjects.Count > 0)
-            {
-                displayObject = _inactiveObjects.Dequeue();
-            }
-            else
-            {
-                // If no inactive objects, find an unused object from the pool
-                for (int i = 0; i < _displayObjectPool.Count; i++)
-                {
-                    int index = (_nextPoolIndex + i) % _displayObjectPool.Count;
-                    GhostNetDisplayObject obj = _displayObjectPool[index];
-
-                    if (!obj.IsEnabled)
-                    {
-                        displayObject = obj;
-                        _nextPoolIndex = (index + 1) % _displayObjectPool.Count;
-                        break;
-                    }
-                }
-            }
-
-            if (displayObject == null)
-            {
-                Debug.LogWarning("No available GhostNetDisplayObjects in pool");
-                return null;
-            }
-
-            // Configure the recycled object
-            ConfigureDisplayObject(displayObject, dataPoint);
-            return displayObject;
-        }
-
-        private void ConfigureDisplayObject(GhostNetDisplayObject displayObject, GhostNetDataPoint dataPoint)
-        {
-            // Activate the DisplayObject
-            displayObject.SetEnabled(true);
-
-            // Random position on screen
-            Vector2 position = new Vector2(
-                UnityEngine.Random.Range(0, screenSize.x),
-                UnityEngine.Random.Range(0, screenSize.y)
-            );
-
-            // Velocity based on tweet count (normalized)
-            float velocityScale = 50 - dataPoint.normalizedNbTweets * 30; // 20 to 50 pixels per second
-            Vector2 velocity = new Vector2(
-                (UnityEngine.Random.value - 0.5f) * velocityScale,
-                (UnityEngine.Random.value - 0.5f) * velocityScale
-            );
-
-            // Initialize the DisplayObject
-            displayObject.Initialize(position, velocity, screenSize, dataPoint);
-            displayObject.creationTime = _currentTime / loopDuration; // Store normalized creation time
-        }
-
-        private void RecycleDisplayObject(GhostNetDisplayObject displayObject)
-        {
-            if (displayObject != null)
-            {
-                // Reset the DisplayObject for reuse
-                displayObject.Reset();
-
-                // Deactivate the DisplayObject
-                displayObject.SetEnabled(false);
-
-                // Add to inactive queue for quick reuse
-                _inactiveObjects.Enqueue(displayObject);
-            }
-        }
-
-        private void ReturnGhostNetDisplayObject(GhostNetDisplayObject displayObject)
-        {
-            if (displayObject != null && displayObject.GetGameObject() != null)
-            {
-                // Reset the DisplayObject for reuse
-                displayObject.Reset();
-
-                // Deactivate the DisplayObject
-                displayObject.SetEnabled(false);
-
-                // Return the GameObject to the pool
-                ghostNetPool.ReturnObject(displayObject.GetGameObject());
-            }
-        }
 
         private void LogDebugInfo()
         {
             float normalizedCurrentTime = _currentTime / loopDuration;
             Debug.Log($"Time: {_currentTime:F1}s, Normalized: {normalizedCurrentTime:F6}, " +
-                     $"Active Objects: {_activeObjects.Count}, Data Index: {_currentDataIndex}/{_data.Length}");
+                     $"Active Objects: {displayObjectPool.GetActiveObjectCount()}, Data Index: {_currentDataIndex}/{_data.Length}");
 
             // Log recycling stats
-            Debug.Log($"Recycling Stats - Active: {_activeObjects.Count}, " +
-                     $"Inactive Queue: {_inactiveObjects.Count}, " +
-                     $"Pool Size: {_displayObjectPool.Count}");
+            Debug.Log($"Recycling Stats - Active: {displayObjectPool.GetActiveObjectCount()}, " +
+                     $"Inactive Queue: {displayObjectPool.GetInactiveObjectCount()}, " +
+                     $"Pool Size: {displayObjectPool.GetPoolSize()}");
 
             if (_currentDataIndex < _data.Length)
             {
@@ -309,7 +161,7 @@ namespace Maelstrom.Unity
             }
 
             // Log current date being displayed
-            if (_activeObjects.Count > 0)
+            if (displayObjectPool.GetActiveObjectCount() > 0)
             {
                 Debug.Log($"  CURRENT DATE DISPLAYED: {_currentDisplayedDate:yyyy-MM-dd HH:mm:ss}");
             }
@@ -326,11 +178,6 @@ namespace Maelstrom.Unity
             loopDuration = newLoopDuration;
         }
 
-        public int GetActiveObjectCount()
-        {
-            return _activeObjects.Count;
-        }
-
         public float GetCurrentTime()
         {
             return _currentTime;
@@ -341,49 +188,12 @@ namespace Maelstrom.Unity
             return _currentDisplayedDate;
         }
 
-        public int GetInactiveObjectCount()
-        {
-            return _inactiveObjects.Count;
-        }
-
-        public int GetDisplayObjectPoolSize()
-        {
-            return _displayObjectPool.Count;
-        }
-
         private void OnDestroy()
         {
-            // Clean up all active objects
-            while (_activeObjects.Count > 0)
-            {
-                GhostNetDisplayObject obj = _activeObjects.Dequeue();
-                if (obj != null)
-                {
-                    ReturnGhostNetDisplayObject(obj);
-                }
-            }
+            // Clean up all objects using the static pool
+            displayObjectPool.ClearPool();
 
-            // Clean up inactive objects
-            while (_inactiveObjects.Count > 0)
-            {
-                GhostNetDisplayObject obj = _inactiveObjects.Dequeue();
-                if (obj != null)
-                {
-                    ReturnGhostNetDisplayObject(obj);
-                }
-            }
-
-            // Clean up display object pool
-            foreach (var obj in _displayObjectPool)
-            {
-                if (obj != null)
-                {
-                    ReturnGhostNetDisplayObject(obj);
-                }
-            }
-            _displayObjectPool.Clear();
-
-            Debug.Log($"[GHOSTNET_MAIN] Cleanup completed - Pool size: {_displayObjectPool.Count}");
+            Debug.Log($"[GHOSTNET_MAIN] Cleanup completed - Pool size: {displayObjectPool.GetPoolSize()}");
         }
 
     }

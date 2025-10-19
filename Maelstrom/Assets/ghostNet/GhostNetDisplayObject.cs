@@ -36,8 +36,39 @@ namespace Maelstrom.Unity
             this.dataPoint = dataPoint;
             gameObject.transform.position = position;
 
-            // Set shader properties based on data point
-            SetOpacity(dataPoint.dayNormPos, dataPoint.dayNormNeu, dataPoint.dayNormNeg);
+            var size = 5 + 5 + dataPoint.normalizedFollowersCount * 50;
+            gameObject.transform.localScale = new Vector3(size, size, 0);
+
+        }
+
+        /// <summary>
+        /// Initialize the display object from a data point (handles all behavior mapping internally)
+        /// </summary>
+        public void InitializeFromDataPoint(GhostNetDataPoint dataPoint, Vector2 screenSize, float creationTime)
+        {
+            this.dataPoint = dataPoint;
+            this.creationTime = creationTime;
+
+            // Random position on screen
+            Vector2 position = new Vector2(
+                UnityEngine.Random.Range(0, screenSize.x),
+                UnityEngine.Random.Range(0, screenSize.y)
+            );
+            gameObject.transform.position = position;
+
+            // Velocity based on tweet count (normalized)
+            var oneAccountVelocity = 20 + dataPoint.daynormalizedNbTweets * 50;
+            var velocity = dataPoint.isAggregated ? 2 : oneAccountVelocity;
+
+            this.velocity = new Vector2(
+                (UnityEngine.Random.value - 0.5f) * velocity,
+                (UnityEngine.Random.value - 0.5f) * velocity
+            );
+
+            // Size based on followers count
+            var oneAccountSize = 20 + dataPoint.normalizedFollowersCount * 50;
+            var size = dataPoint.isAggregated ? 2 : oneAccountSize;
+            gameObject.transform.localScale = new Vector3(size, size, 0);
         }
 
         public void Update(float deltaTime)
@@ -52,18 +83,6 @@ namespace Maelstrom.Unity
             dataPoint = default;
         }
 
-        /// <summary>
-        /// Set opacity for positive, neutral, and negative ghost nets
-        /// </summary>
-        public void SetOpacity(float alphaPos, float alphaNeu, float alphaNeg)
-        {
-            if (material != null)
-            {
-                material.SetFloat("_OpacityPos", alphaPos);
-                material.SetFloat("_OpacityNeu", alphaNeu);
-                material.SetFloat("_OpacityNeg", alphaNeg);
-            }
-        }
 
         /// <summary>
         /// Set shader properties
