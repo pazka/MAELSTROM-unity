@@ -9,6 +9,7 @@ namespace Maelstrom.Unity
     {
         private GameObject gameObject;
         private Renderer renderer;
+        private Material material;
         private bool isEnabled = false;
         private Vector2 velocity;
         private FeedDataPoint dataPoint;
@@ -21,6 +22,7 @@ namespace Maelstrom.Unity
         {
             gameObject = pointDisplay;
             renderer = pointDisplay.GetComponent<Renderer>();
+            material = renderer.material;
             if (renderer == null)
             {
                 throw new System.Exception("Renderer not found on point display");
@@ -65,11 +67,13 @@ namespace Maelstrom.Unity
             gameObject.transform.localScale = pixelSize;
         }
 
-        public void Update(float deltaTime)
+        public void Update(float deltaTime, float maelstrom)
         {
             if (gameObject != null)
             {
                 gameObject.transform.position += new Vector3(velocity.x, velocity.y, 0) * deltaTime;
+
+                material.SetColor("_Color", new Color(1 - maelstrom, 1 - maelstrom, 1));
             }
         }
 
@@ -82,41 +86,6 @@ namespace Maelstrom.Unity
             }
             dataPoint = default;
             velocity = Vector2.zero;
-        }
-
-        /// <summary>
-        /// Set shader properties
-        /// </summary>
-        public void SetShaderProperty(string propertyName, float value)
-        {
-            if (renderer != null && renderer.material != null)
-            {
-                renderer.material.SetFloat(propertyName, value);
-            }
-        }
-
-        public void SetShaderProperty(string propertyName, Vector2 value)
-        {
-            if (renderer != null && renderer.material != null)
-            {
-                renderer.material.SetVector(propertyName, value);
-            }
-        }
-
-        public void SetShaderProperty(string propertyName, Vector3 value)
-        {
-            if (renderer != null && renderer.material != null)
-            {
-                renderer.material.SetVector(propertyName, value);
-            }
-        }
-
-        public void SetShaderProperty(string propertyName, Vector4 value)
-        {
-            if (renderer != null && renderer.material != null)
-            {
-                renderer.material.SetVector(propertyName, value);
-            }
         }
 
         /// <summary>

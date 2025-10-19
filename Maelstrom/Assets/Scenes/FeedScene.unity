@@ -632,7 +632,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Maelstrom.Unity.FeedMain
   screenSize: {x: 1920, y: 1080}
-  loopDuration: 600
+  loopDuration: 20
   displayObjectPool: {fileID: 1308339367}
   dataLoader: {fileID: 337801906}
   showDebugInfo: 1

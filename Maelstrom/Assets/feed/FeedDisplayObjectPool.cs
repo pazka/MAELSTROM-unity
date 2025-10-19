@@ -220,13 +220,13 @@ namespace Maelstrom.Unity
         /// <summary>
         /// Update all active display objects
         /// </summary>
-        public void UpdateActiveObjects()
+        public void UpdateActiveObjects(float maelstromValue = 0f)
         {
             foreach (var obj in _activeObjects)
             {
                 if (obj != null)
                 {
-                    obj.Update(Time.deltaTime);
+                    obj.Update(Time.deltaTime, maelstromValue);
                 }
             }
         }

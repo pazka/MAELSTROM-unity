@@ -23,6 +23,7 @@ namespace Maelstrom.Unity
         [Header("Debug")]
         [SerializeField] private bool showDebugInfo = true;
         [SerializeField] private float debugUpdateInterval = 5.0f;
+        [SerializeField] private FeedMaelstromManager maelstrom = new FeedMaelstromManager();
 
         // Data management
         private FeedDataPoint[] _data;
@@ -85,6 +86,9 @@ namespace Maelstrom.Unity
             _data = dataLoader.Data;
             _normalizedDisplayDuration = dataLoader.GetNormalizedDuration(TimeSpan.FromDays(7));
 
+            // Initialize Maelstrom manager with data bounds
+            maelstrom.RegisterDataBounds(_data);
+
             // Initialize DisplayObject pool
             displayObjectPool.Initialize(screenSize);
 
@@ -104,8 +108,8 @@ namespace Maelstrom.Unity
             // Then, activate objects for new data points
             ActivateObjectsForNewData(normalizedCurrentTime);
 
-            // Update all active objects
-            displayObjectPool.UpdateActiveObjects();
+            // Update all active objects with current maelstrom value
+            displayObjectPool.UpdateActiveObjects(maelstrom.GetCurrentMaelstrom());
         }
 
         private void ActivateObjectsForNewData(float normalizedCurrentTime)
@@ -118,6 +122,9 @@ namespace Maelstrom.Unity
                 // Check if this data point should be displayed at current time
                 if (dataPoint.normalizedDate <= normalizedCurrentTime)
                 {
+                    // Register data with maelstrom manager for daily retweet counting
+                    maelstrom.RegisterData(dataPoint);
+
                     displayObjectPool.ActivateDataPoint(dataPoint, normalizedCurrentTime);
                     _currentDisplayedDate = dataPoint.date;
                     _currentDataIndex++;
@@ -133,6 +140,8 @@ namespace Maelstrom.Unity
             if (_currentDataIndex >= _data.Length)
             {
                 _currentDataIndex = 0;
+                // Reset the time to start a new loop
+                _currentTime = 0.0f;
             }
         }
 
@@ -160,6 +169,11 @@ namespace Maelstrom.Unity
             {
                 Debug.Log($"  CURRENT DATE DISPLAYED: {_currentDisplayedDate:yyyy-MM-dd HH:mm:ss}");
             }
+
+            // Log maelstrom information
+            Debug.Log($"  MAELSTROM: {maelstrom.GetCurrentMaelstrom():F3}, " +
+                     $"Current Day Retweets: {maelstrom.GetCurrentRetweetCount()}, " +
+                     $"Bounds: {maelstrom.GetMinRetweetCount()}-{maelstrom.GetMaxRetweetCount()}");
         }
 
         // Public methods for external control
@@ -196,6 +210,16 @@ namespace Maelstrom.Unity
         public int GetDisplayObjectPoolSize()
         {
             return displayObjectPool.GetPoolSize();
+        }
+
+        public float GetCurrentMaelstrom()
+        {
+            return maelstrom.GetCurrentMaelstrom();
+        }
+
+        public int GetCurrentDayRetweetCount()
+        {
+            return maelstrom.GetCurrentRetweetCount();
         }
 
         private void OnDisable()
