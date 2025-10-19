@@ -8,19 +8,22 @@ namespace Maelstrom.Unity
     public class DisplayObject
     {
         private GameObject gameObject;
-        private Material material;
+        private Renderer renderer;
         private bool isEnabled = false;
         private Vector2 velocity;
+        private FeedDataPoint dataPoint;
 
         public float creationTime = 0.0f;
+        public float normalizedCreationTime = 0.0f;
+        public float createdGameTime = 0.0f;
 
         public DisplayObject(GameObject pointDisplay)
         {
             gameObject = pointDisplay;
-            material = pointDisplay.GetComponent<Renderer>().material;
-            if (material == null)
+            renderer = pointDisplay.GetComponent<Renderer>();
+            if (renderer == null)
             {
-                throw new System.Exception("Material not found on point display");
+                throw new System.Exception("Renderer not found on point display");
             }
         }
 
@@ -29,22 +32,56 @@ namespace Maelstrom.Unity
             return gameObject;
         }
 
-        public void Initialize(Vector2 position, Vector2 velocity, Vector2 screenSize, Vector2 pixelSize)
+        /// <summary>
+        /// Initialize the display object from a data point (handles all behavior mapping internally)
+        /// </summary>
+        public void InitializeFromDataPoint(FeedDataPoint dataPoint, Vector2 screenSize, float normalizedCreationTime)
         {
-            this.velocity = velocity;
+            Reset();
+
+            this.dataPoint = dataPoint;
+            this.normalizedCreationTime = normalizedCreationTime;
+            this.createdGameTime = Time.time;
+
+            // Random position on screen
+            Vector2 position = new Vector2(
+                UnityEngine.Random.Range(0, screenSize.x),
+                UnityEngine.Random.Range(0, screenSize.y)
+            );
+
+            // Velocity based on retweet count (normalized)
+            float velocityScale = 150 - dataPoint.normalizedRetweetCount * 120; // 20 to 100 pixels per second
+            this.velocity = new Vector2(
+                (UnityEngine.Random.value - 0.5f) * velocityScale,
+                (UnityEngine.Random.value - 0.5f) * velocityScale
+            );
+
+            // Size based on retweet count (normalized)
+            float sizeScale = 25 + dataPoint.normalizedRetweetCount * 150; // 25 to 175 pixels
+            Vector2 pixelSize = new Vector2(sizeScale, sizeScale);
+
+            // Set initial position and scale
             gameObject.transform.position = position;
             gameObject.transform.localScale = pixelSize;
         }
 
         public void Update(float deltaTime)
         {
-            gameObject.transform.position += new Vector3(velocity.x, velocity.y, 0) * deltaTime;
+            if (gameObject != null)
+            {
+                gameObject.transform.position += new Vector3(velocity.x, velocity.y, 0) * deltaTime;
+            }
         }
 
-        public void Reset()
+        private void Reset()
         {
-            gameObject.transform.position = Vector3.zero;
-            gameObject.transform.localScale = Vector3.one;
+            if (gameObject != null)
+            {
+                gameObject.transform.position = Vector3.zero;
+                gameObject.transform.localScale = Vector3.one;
+            }
+            dataPoint = default;
+            velocity = Vector2.zero;
         }
 
         /// <summary>
@@ -52,22 +89,34 @@ namespace Maelstrom.Unity
         /// </summary>
         public void SetShaderProperty(string propertyName, float value)
         {
-            material.SetFloat(propertyName, value);
+            if (renderer != null && renderer.material != null)
+            {
+                renderer.material.SetFloat(propertyName, value);
+            }
         }
 
         public void SetShaderProperty(string propertyName, Vector2 value)
         {
-            material.SetVector(propertyName, value);
+            if (renderer != null && renderer.material != null)
+            {
+                renderer.material.SetVector(propertyName, value);
+            }
         }
 
         public void SetShaderProperty(string propertyName, Vector3 value)
         {
-            material.SetVector(propertyName, value);
+            if (renderer != null && renderer.material != null)
+            {
+                renderer.material.SetVector(propertyName, value);
+            }
         }
 
         public void SetShaderProperty(string propertyName, Vector4 value)
         {
-            material.SetVector(propertyName, value);
+            if (renderer != null && renderer.material != null)
+            {
+                renderer.material.SetVector(propertyName, value);
+            }
         }
 
         /// <summary>
@@ -76,10 +125,13 @@ namespace Maelstrom.Unity
         public void SetEnabled(bool enabled)
         {
             isEnabled = enabled;
-            gameObject.SetActive(enabled);
+            if (gameObject != null)
+            {
+                gameObject.SetActive(enabled);
+            }
         }
 
         public bool IsEnabled => isEnabled;
-
+        public FeedDataPoint DataPoint => dataPoint;
     }
 }

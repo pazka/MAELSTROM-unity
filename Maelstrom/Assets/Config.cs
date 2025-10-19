@@ -340,33 +340,6 @@ namespace Maelstrom.Unity
                 configEntries.Add(new ConfigDisplayEntry(kvp.Key, kvp.Value));
             }
         }
-
-        /// <summary>
-        /// Refresh the inspector display
-        /// </summary>
-        [ContextMenu("Refresh Display")]
-        public void RefreshDisplay()
-        {
-            UpdateInspectorDisplay();
-        }
-
-        /// <summary>
-        /// Reload configuration from file
-        /// </summary>
-        [ContextMenu("Reload Config")]
-        public void ReloadConfig()
-        {
-            Reload();
-        }
-
-        /// <summary>
-        /// Save configuration to file
-        /// </summary>
-        [ContextMenu("Save Config")]
-        public void SaveConfig()
-        {
-            Save();
-        }
     }
 
     /// <summary>

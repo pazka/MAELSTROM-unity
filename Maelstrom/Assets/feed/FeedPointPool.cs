@@ -98,20 +98,34 @@ namespace Maelstrom.Unity
         /// </summary>
         public void ClearPool()
         {
-            foreach (GameObject obj in _allObjects)
+            if (_allObjects != null)
             {
-                if (obj != null)
+                foreach (GameObject obj in _allObjects)
                 {
-                    DestroyImmediate(obj);
+                    if (obj != null)
+                    {
+                        DestroyImmediate(obj);
+                    }
                 }
+                _allObjects.Clear();
             }
-            _allObjects.Clear();
-            _availableObjects.Clear();
+
+            if (_availableObjects != null)
+            {
+                _availableObjects.Clear();
+            }
         }
 
         private void OnDestroy()
         {
-            ClearPool();
+            try
+            {
+                ClearPool();
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"[POINT_POOL] Error during cleanup: {ex.Message}");
+            }
         }
     }
 }
