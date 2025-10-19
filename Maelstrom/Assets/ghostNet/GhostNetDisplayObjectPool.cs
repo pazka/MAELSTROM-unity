@@ -14,6 +14,7 @@ namespace Maelstrom.Unity
         [SerializeField] private int maxActiveObjects = 100000;
         [SerializeField] private int maxPoolSize = 500000; // Maximum total pool size to prevent unlimited growth
         [SerializeField] private int expansionSize = 1000; // How many objects to create when expanding the pool
+        [SerializeField] private GhostNetPointPool ghostNetPointPool; // Reference to the point pool for creating new objects
 
         private List<GhostNetDisplayObject> _displayObjectPool = new List<GhostNetDisplayObject>();
         private Queue<GhostNetDisplayObject> _activeObjects = new Queue<GhostNetDisplayObject>();
@@ -22,15 +23,12 @@ namespace Maelstrom.Unity
         private bool _isInitialized = false;
 
         private Vector2 screenSize;
-        private GhostNetPointPool _ghostNetPool; // Reference to the point pool for creating new objects
-
         /// <summary>
         /// Initialize the display object pool
         /// </summary>
-        public void Initialize(GhostNetPointPool ghostNetPool, Vector2 screenSize)
+        public void Initialize(Vector2 screenSize)
         {
             this.screenSize = screenSize;
-            this._ghostNetPool = ghostNetPool; // Store reference for dynamic creation
 
             if (_isInitialized)
             {
@@ -38,7 +36,7 @@ namespace Maelstrom.Unity
                 return;
             }
 
-            if (ghostNetPool == null)
+            if (this.ghostNetPointPool == null)
             {
                 Debug.LogError("GhostNetPointPool is null");
                 return;
@@ -48,7 +46,7 @@ namespace Maelstrom.Unity
 
             for (int i = 0; i < poolSize; i++)
             {
-                GameObject prefab = ghostNetPool.GetOne();
+                GameObject prefab = ghostNetPointPool.GetOne();
                 if (prefab != null)
                 {
                     GhostNetDisplayObject displayObject = new GhostNetDisplayObject(prefab);
@@ -66,7 +64,7 @@ namespace Maelstrom.Unity
         /// </summary>
         private bool CreateMoreObjects()
         {
-            if (_ghostNetPool == null)
+            if (ghostNetPointPool == null)
             {
                 Debug.LogError("GhostNetPointPool reference is null, cannot create more objects");
                 return false;
@@ -84,7 +82,7 @@ namespace Maelstrom.Unity
 
             for (int i = 0; i < objectsToCreate; i++)
             {
-                GameObject prefab = _ghostNetPool.GetOne();
+                GameObject prefab = ghostNetPointPool.GetOne();
                 if (prefab != null)
                 {
                     GhostNetDisplayObject displayObject = new GhostNetDisplayObject(prefab);
@@ -175,7 +173,7 @@ namespace Maelstrom.Unity
         /// <summary>
         /// Activate display objects for a data point (handles the full activation logic)
         /// </summary>
-        public void ActivateDataPoint(GhostNetDataPoint dataPoint, float creationTime)
+        public void ActivateDataPoint(GhostNetDataPoint dataPoint, float normalizedCreationtime)
         {
             if (!_isInitialized)
             {
@@ -210,7 +208,7 @@ namespace Maelstrom.Unity
                 }
 
                 // Let the display object handle its own initialization based on data point
-                displayObject.InitializeFromDataPoint(dataPoint, screenSize, creationTime);
+                displayObject.InitializeFromDataPoint(dataPoint, screenSize, normalizedCreationtime);
                 displayObject.SetEnabled(true);
                 _activeObjects.Enqueue(displayObject);
             }
@@ -224,7 +222,6 @@ namespace Maelstrom.Unity
             if (displayObject == null) return;
 
             // Reset the DisplayObject for reuse
-            displayObject.Reset();
             displayObject.SetEnabled(false);
 
             // Add to inactive queue for quick reuse
@@ -239,7 +236,7 @@ namespace Maelstrom.Unity
             while (_activeObjects.Count > 0)
             {
                 GhostNetDisplayObject obj = _activeObjects.Peek();
-                float objectAge = normalizedCurrentTime - obj.creationTime;
+                float objectAge = normalizedCurrentTime - obj.normalizedCreationTime;
 
                 if (objectAge >= normalizedDisplayDuration)
                 {
@@ -258,13 +255,13 @@ namespace Maelstrom.Unity
         /// <summary>
         /// Update all active display objects
         /// </summary>
-        public void UpdateActiveObjects()
+        public void UpdateActiveObjects(float maelstrom)
         {
             foreach (var obj in _activeObjects)
             {
                 if (obj != null)
                 {
-                    obj.Update(Time.deltaTime);
+                    obj.Update(Time.deltaTime, maelstrom);
                 }
             }
         }
@@ -312,7 +309,6 @@ namespace Maelstrom.Unity
                 GhostNetDisplayObject obj = _activeObjects.Dequeue();
                 if (obj != null)
                 {
-                    obj.Reset();
                     obj.SetEnabled(false);
                 }
             }
@@ -323,7 +319,6 @@ namespace Maelstrom.Unity
                 GhostNetDisplayObject obj = _inactiveObjects.Dequeue();
                 if (obj != null)
                 {
-                    obj.Reset();
                     obj.SetEnabled(false);
                 }
             }
@@ -333,14 +328,13 @@ namespace Maelstrom.Unity
             {
                 if (obj != null)
                 {
-                    obj.Reset();
                     obj.SetEnabled(false);
                 }
             }
 
             _displayObjectPool.Clear();
             _isInitialized = false;
-            _ghostNetPool = null; // Clear the reference
+            ghostNetPointPool = null; // Clear the reference
 
             Debug.Log("DisplayObjectPool cleared and reset");
         }
