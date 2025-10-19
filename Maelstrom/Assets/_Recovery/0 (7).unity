@@ -353,7 +353,6 @@ GameObject:
   m_Component:
   - component: {fileID: 457737973}
   - component: {fileID: 457737974}
-  - component: {fileID: 457737975}
   m_Layer: 0
   m_Name: PointPrefab
   m_TagString: Untagged
@@ -434,27 +433,6 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
---- !u!114 &457737975
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 457737972}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a7e40afea47803b49b8efd18f5f18a1c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Maelstrom.Unity.ShaderProp
-  shaderProperties:
-  - propertyName: _Opacity
-    type: 0
-    floatValue: 0.25
-    vector2Value: {x: 0, y: 0}
-    vector3Value: {x: 0, y: 0, z: 0}
-    vector4Value: {x: 0, y: 0, z: 0, w: 0}
-    colorValue: {r: 0, g: 0, b: 0, a: 0}
-  applyInEditMode: 1
 --- !u!1 &519420028
 GameObject:
   m_ObjectHideFlags: 0

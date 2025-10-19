@@ -30,12 +30,12 @@ namespace Maelstrom.Unity
 
         // Data management
         private GhostNetDataPoint[] _data;
-        private int _currentDataIndex = 0;
         private float _normalizedDisplayDuration; // One day in normalized data space
         private System.Random _random = new System.Random();
         private DateTime _currentDisplayedDate = DateTime.MinValue;
         private TimeSpan DATA_TTL = TimeSpan.FromDays(3);
         private int loopDuration;
+        private int _dataIndex = 0; // Track current position in data for looping
 
         // Day progression tracking for smooth spawning
         private DateTime _currentDay = DateTime.MinValue;
@@ -105,7 +105,8 @@ namespace Maelstrom.Unity
 
         private void ProcessDataAndManageObjects()
         {
-            float normalizedCurrentTime = _currentTime / loopDuration;
+            // Use modulo to create looping behavior
+            float normalizedCurrentTime = (_currentTime % loopDuration) / loopDuration;
 
             displayObjectPool.RecycleOldObjects(normalizedCurrentTime, _normalizedDisplayDuration);
 
@@ -121,9 +122,20 @@ namespace Maelstrom.Unity
             // Calculate which day we should be processing
             DateTime targetDay = GetDayFromNormalizedTime(normalizedCurrentTime);
 
-            // If we've moved to a new day, load that day's data
-            if (targetDay != _currentDay)
+            // Check if we've looped back to the beginning (when normalized time resets to 0)
+            bool hasLooped = normalizedCurrentTime < 0.01f && _currentTime > loopDuration;
+
+            // If we've moved to a new day or looped back, load that day's data
+            if (targetDay != _currentDay || hasLooped)
             {
+                // Clear all active objects when looping to prevent accumulation
+                if (hasLooped)
+                {
+                    Debug.Log($"LOOP DETECTED: Clearing {displayObjectPool.GetActiveObjectCount()} active objects and resetting data index");
+                    displayObjectPool.ClearAllActiveObjects();
+                    _dataIndex = 0;
+                }
+
                 LoadDayData(targetDay);
                 _currentDay = targetDay;
                 _currentDayDataIndex = 0;
@@ -170,19 +182,38 @@ namespace Maelstrom.Unity
         {
             _currentDayData.Clear();
 
-            // Find all data points for the target day
-            for (int i = 0; i < _data.Length; i++)
+            // Find all data points for the target day, starting from dataIndex for efficiency
+            for (int i = _dataIndex; i < _data.Length; i++)
             {
                 if (_data[i].date.Date == targetDay)
                 {
+                    maelstrom.RegisterData(_data[i]);
                     _currentDayData.Add(_data[i]);
+                }
+                else if (_data[i].date.Date > targetDay)
+                {
+                    // Since data is sorted chronologically, we can break early
+                    break;
+                }
+            }
+
+            // If we didn't find data starting from dataIndex, search from beginning
+            if (_currentDayData.Count == 0)
+            {
+                for (int i = 0; i < _dataIndex; i++)
+                {
+                    if (_data[i].date.Date == targetDay)
+                    {
+                        maelstrom.RegisterData(_data[i]);
+                        _currentDayData.Add(_data[i]);
+                    }
                 }
             }
 
             // Sort by time of day for proper progression
             _currentDayData.Sort((a, b) => a.date.TimeOfDay.CompareTo(b.date.TimeOfDay));
 
-            Debug.Log($"Loaded {_currentDayData.Count} data points for day {targetDay:yyyy-MM-dd}");
+            //  Debug.Log($"Loaded {_currentDayData.Count} data points for day {targetDay:yyyy-MM-dd}");
         }
 
         private void SpawnDataPointsForCurrentDay(float normalizedCurrentTime)
@@ -200,16 +231,32 @@ namespace Maelstrom.Unity
                 displayObjectPool.ActivateDataPoint(dataPoint, normalizedCurrentTime);
                 _currentDisplayedDate = dataPoint.date;
                 _currentDayDataIndex++;
+
+                // Update global data index to track overall progress
+                _dataIndex = Mathf.Max(_dataIndex, GetDataIndexForDate(dataPoint.date));
             }
         }
 
+        private int GetDataIndexForDate(DateTime date)
+        {
+            // Find the index of the data point with the given date
+            for (int i = 0; i < _data.Length; i++)
+            {
+                if (_data[i].date == date)
+                {
+                    return i;
+                }
+            }
+            return 0; // Default to 0 if not found
+        }
 
         private void LogDebugInfo()
         {
-            float normalizedCurrentTime = _currentTime / loopDuration;
+            float normalizedCurrentTime = (_currentTime % loopDuration) / loopDuration;
             Debug.Log($"Time: {_currentTime:F1}s, Normalized: {normalizedCurrentTime:F6}, " +
                      $"Active Objects: {displayObjectPool.GetActiveObjectCount()}, " +
-                     $"Current Day: {_currentDay:yyyy-MM-dd}, Day Progress: {_dayProgress:F2}");
+                     $"Current Day: {_currentDay:yyyy-MM-dd}, Day Progress: {_dayProgress:F2}, " +
+                     $"Data Index: {_dataIndex}/{_data.Length}");
 
             // Log recycling stats
             Debug.Log($"Recycling Stats - Active: {displayObjectPool.GetActiveObjectCount()}, " +
@@ -251,6 +298,11 @@ namespace Maelstrom.Unity
         public DateTime GetCurrentDisplayedDate()
         {
             return _currentDisplayedDate;
+        }
+
+        public int GetCurrentDataIndex()
+        {
+            return _dataIndex;
         }
 
         private void OnDestroy()

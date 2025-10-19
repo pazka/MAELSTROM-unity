@@ -407,6 +407,13 @@ MonoBehaviour:
     vector3Value: {x: 0, y: 0, z: 0}
     vector4Value: {x: 0, y: 0, z: 0, w: 0}
     colorValue: {r: 0, g: 0, b: 0, a: 0}
+  - propertyName: _Opacity
+    type: 0
+    floatValue: 1
+    vector2Value: {x: 0, y: 0}
+    vector3Value: {x: 0, y: 0, z: 0}
+    vector4Value: {x: 0, y: 0, z: 0, w: 0}
+    colorValue: {r: 0, g: 0, b: 0, a: 0}
   applyInEditMode: 1
 --- !u!1 &666469127
 GameObject:
@@ -456,7 +463,7 @@ MonoBehaviour:
   autoRefresh: 1
   configEntries:
   - key: loopDuration
-    value: 600
+    value: 6000
     type: Int32
 --- !u!1 &1567655189
 GameObject:
@@ -538,7 +545,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Maelstrom.Unity.GhostNetPointPool
   ghostNetPrefab: {fileID: 517474014}
-  initialPoolSize: 10000
+  initialPoolSize: 50000
   maxPoolSize: 100000
 --- !u!4 &1643472412
 Transform:
@@ -587,7 +594,7 @@ MonoBehaviour:
   initialPoolSize: 10000
   maxActiveObjects: 100000
   maxPoolSize: 500000
-  expansionSize: 1000
+  expansionSize: 10000
   ghostNetPointPool: {fileID: 1643472411}
 --- !u!4 &1743257721
 Transform:

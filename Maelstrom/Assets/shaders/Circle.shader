@@ -4,6 +4,7 @@ Shader "Custom/Circle"
     {
         _MainTex("Sprite Texture", 2D) = "white" {} // required for SpriteRenderer
         _Radius("Radius", Float) = 0
+        _Opacity("Opacity", Float) = 1
         _Color("Color", Color) = (1,1,1,1)
     }
 
@@ -38,6 +39,7 @@ Shader "Custom/Circle"
             
             CBUFFER_START(UnityPerMaterial)
                 float _Radius;
+                float _Opacity;
                 float4 _Color;
             CBUFFER_END
 
@@ -55,7 +57,7 @@ Shader "Custom/Circle"
                 float radius = _Radius < 0 ? 0.5 : _Radius < 1 ? _Radius : 0.5;
 
                 float dist = distance(IN.uv, center);
-                float circle = smoothstep(radius, 0.0, dist);
+                float circle = smoothstep(radius, 0.0, dist) * _Opacity;
 
                 return float4(_Color.rgb, circle );
             }

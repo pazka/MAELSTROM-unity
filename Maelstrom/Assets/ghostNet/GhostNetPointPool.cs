@@ -11,12 +11,12 @@ namespace Maelstrom.Unity
     {
         [Header("Pool Settings")]
         [SerializeField] private GameObject ghostNetPrefab;
-        [SerializeField] private int initialPoolSize = 1000;
-        [SerializeField] private int maxPoolSize = 10000;
+        [SerializeField] private int initialPoolSize = 10000;
+        [SerializeField] private int maxPoolSize = 100000;
 
         private Queue<GameObject> _availableObjects = new Queue<GameObject>();
-        private List<GameObject> _allObjects = new List<GameObject>();
         private Transform _poolParent;
+        private int _totalObjectCount = 0;
 
         public GameObject GhostNetPrefab => ghostNetPrefab;
 
@@ -49,8 +49,8 @@ namespace Maelstrom.Unity
 
             GameObject newObj = Instantiate(ghostNetPrefab, _poolParent);
             newObj.SetActive(false);
-            _allObjects.Add(newObj);
             _availableObjects.Enqueue(newObj);
+            _totalObjectCount++;
             return newObj;
         }
 
@@ -67,14 +67,17 @@ namespace Maelstrom.Unity
             }
 
             // No available objects, create new one if under max limit
-            if (_allObjects.Count < maxPoolSize)
+            if (_totalObjectCount < maxPoolSize)
             {
-
                 GameObject newObj = CreateNewObject();
+                if (newObj != null)
+                {
+                    newObj.SetActive(true);
+                }
                 return newObj;
             }
 
-            Debug.LogWarning($"GhostNet pool exhausted, total count: {_allObjects.Count}");
+            Debug.LogWarning($"GhostNet pool exhausted, total available: {_availableObjects.Count}");
             return null;
         }
 
@@ -83,7 +86,7 @@ namespace Maelstrom.Unity
         /// </summary>
         public void ReturnObject(GameObject obj)
         {
-            if (obj != null && _allObjects.Contains(obj))
+            if (obj != null)
             {
                 obj.SetActive(false);
                 _availableObjects.Enqueue(obj);
@@ -98,22 +101,25 @@ namespace Maelstrom.Unity
         /// <summary>
         /// Get total count of objects in pool
         /// </summary>
-        public int TotalCount => _allObjects.Count;
+        public int TotalCount => _totalObjectCount;
 
         /// <summary>
         /// Clear all objects from the pool
         /// </summary>
         public void ClearPool()
         {
-            foreach (GameObject obj in _allObjects)
+            // Destroy all objects in the available queue
+            while (_availableObjects.Count > 0)
             {
+                GameObject obj = _availableObjects.Dequeue();
                 if (obj != null)
                 {
                     DestroyImmediate(obj);
                 }
             }
-            _allObjects.Clear();
-            _availableObjects.Clear();
+
+            // Reset counters
+            _totalObjectCount = 0;
         }
 
         private void OnDestroy()
