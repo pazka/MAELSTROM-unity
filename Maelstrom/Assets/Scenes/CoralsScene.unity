@@ -119,6 +119,56 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!1 &155714740
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 155714742}
+  - component: {fileID: 155714741}
+  m_Layer: 0
+  m_Name: CoralConfig
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &155714741
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 155714740}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4b5fda009bd383478edc8369665c101, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Maelstrom.Unity.Config
+  showConfigInInspector: 1
+  autoRefresh: 1
+  configEntries:
+  - key: loopDuration
+    value: 600
+    type: Int32
+--- !u!4 &155714742
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 155714740}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &178319257
 GameObject:
   m_ObjectHideFlags: 0
@@ -164,7 +214,6 @@ MonoBehaviour:
     vector3Value: {x: 0, y: 0, z: 0}
     vector4Value: {x: 0, y: 0, z: 0, w: 0}
     colorValue: {r: 0, g: 0, b: 0, a: 0}
-  applyOnStart: 1
   applyInEditMode: 1
 --- !u!212 &178319259
 SpriteRenderer:
@@ -512,6 +561,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Maelstrom.Unity.MainCorals
   loopDuration: 600
   dataLoader: {fileID: 2116835882}
+  config: {fileID: 155714741}
   positive: {fileID: 1896330684}
   negative: {fileID: 2098708237}
   neutral: {fileID: 178319257}
@@ -648,7 +698,6 @@ MonoBehaviour:
     vector3Value: {x: 0, y: 0, z: 0}
     vector4Value: {x: 0, y: 0, z: 0, w: 0}
     colorValue: {r: 0, g: 0, b: 0, a: 0}
-  applyOnStart: 1
   applyInEditMode: 1
 --- !u!1 &2098708237
 GameObject:
@@ -695,7 +744,6 @@ MonoBehaviour:
     vector3Value: {x: 0, y: 0, z: 0}
     vector4Value: {x: 0, y: 0, z: 0, w: 0}
     colorValue: {r: 0, g: 0, b: 0, a: 0}
-  applyOnStart: 1
   applyInEditMode: 1
 --- !u!212 &2098708239
 SpriteRenderer:
@@ -880,3 +928,4 @@ SceneRoots:
   - {fileID: 2098708240}
   - {fileID: 2116835881}
   - {fileID: 1000416833}
+  - {fileID: 155714742}

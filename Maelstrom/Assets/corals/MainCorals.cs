@@ -7,11 +7,11 @@ namespace Maelstrom.Unity
 {
     public class MainCorals : MonoBehaviour
     {
-        [Header("Display Settings")]
-        [SerializeField] private float loopDuration = 600.0f; // seconds
 
         [Header("Data Settings")]
         [SerializeField] private CoralsDataLoader dataLoader;
+        [Header("Data Settings")]
+        [SerializeField] private Config config;
 
         // GameObjects representing three types of corals
         [SerializeField] private GameObject positive;
@@ -21,6 +21,11 @@ namespace Maelstrom.Unity
         // Timing
         private float _currentTime = 0.0f;
         private CoralDataPoint[] _data;
+        private CoralsMaelstromManager _maelstromManager;
+        private float loopDuration;
+        private int _currentDataIndex = 0;
+        private bool _isLooping = false;
+
         private void Awake()
         {
 
@@ -41,6 +46,7 @@ namespace Maelstrom.Unity
 
         private void Start()
         {
+            loopDuration = config.Get("loopDuration", 600);
             if (SceneManager.GetActiveScene().name != "CoralsScene")
             {
                 return;
@@ -74,11 +80,27 @@ namespace Maelstrom.Unity
         private void InitializeData()
         {
             _data = dataLoader.Data;
+            _maelstromManager = new CoralsMaelstromManager();
+            _maelstromManager.RegisterDataBounds(_data);
             Debug.Log($"Initialized corals with {_data.Length} data points");
         }
 
         private void ProcessDataAndUpdateCorals()
         {
+            // Check if we need to loop
+            if (_currentTime >= loopDuration)
+            {
+                _currentTime = 0.0f;
+                _currentDataIndex = 0;
+                _isLooping = true;
+
+                // Reset maelstrom manager for new loop
+                _maelstromManager = new CoralsMaelstromManager();
+                _maelstromManager.RegisterDataBounds(_data);
+
+                Debug.Log("Corals data looped - resetting maelstrom manager");
+            }
+
             float normalizedCurrentTime = _currentTime / loopDuration;
 
             // Find the two data points to interpolate between
@@ -102,6 +124,7 @@ namespace Maelstrom.Unity
             if (beforeIndex == -1)
             {
                 // Before first data point, use first data point
+                _maelstromManager.RegisterData(_data[0]);
                 UpdateCoralsAlpha(_data[0].dayNormPos, _data[0].dayNormNeu, _data[0].dayNormNeg);
                 return;
             }
@@ -150,25 +173,40 @@ namespace Maelstrom.Unity
             float alphaNeu = Mathf.Lerp(beforeData.dayNormNeu, nextData.dayNormNeu, t);
             float alphaNeg = Mathf.Lerp(beforeData.dayNormNeg, nextData.dayNormNeg, t);
 
+            // Register current data point with maelstrom manager
+            _maelstromManager.RegisterData(beforeData);
+
             UpdateCoralsAlpha(alphaPos, alphaNeu, alphaNeg);
         }
 
         private void UpdateCoralsAlpha(float alphaPos, float alphaNeu, float alphaNeg)
         {
+            float maelstromValue = _maelstromManager.GetCurrentMaelstrom();
+
             positive.GetComponent<Renderer>().material.SetFloat("_Opacity", alphaPos);
+            positive.GetComponent<Renderer>().material.SetFloat("_Maelstrom", maelstromValue);
+
             neutral.GetComponent<Renderer>().material.SetFloat("_Opacity", alphaNeu);
+            neutral.GetComponent<Renderer>().material.SetFloat("_Maelstrom", maelstromValue);
+
             negative.GetComponent<Renderer>().material.SetFloat("_Opacity", alphaNeg);
+            negative.GetComponent<Renderer>().material.SetFloat("_Maelstrom", maelstromValue);
         }
 
-        // Public methods for external control
-        public void SetLoopDuration(float newLoopDuration)
-        {
-            loopDuration = newLoopDuration;
-        }
 
         public float GetCurrentTime()
         {
             return _currentTime;
+        }
+
+        public bool IsLooping()
+        {
+            return _isLooping;
+        }
+
+        public int GetCurrentDataIndex()
+        {
+            return _currentDataIndex;
         }
     }
 }
