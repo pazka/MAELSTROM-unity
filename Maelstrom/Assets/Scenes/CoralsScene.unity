@@ -321,7 +321,7 @@ MonoBehaviour:
   m_RenderShadows: 0
   m_RequiresDepthTextureOption: 2
   m_RequiresOpaqueTextureOption: 2
-  m_CameraType: 1
+  m_CameraType: 0
   m_Cameras: []
   m_RendererIndex: -1
   m_VolumeLayerMask:
@@ -359,7 +359,7 @@ Camera:
   m_GameObject: {fileID: 235718324}
   m_Enabled: 1
   serializedVersion: 2
-  m_ClearFlags: 4
+  m_ClearFlags: 2
   m_BackGroundColor: {r: 0, g: 0, b: 0, a: 0}
   m_projectionMatrixMode: 1
   m_GateFitMode: 2
@@ -559,7 +559,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 495bf9cbdfe0c2b4ebeb3b1cc2aba42e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Maelstrom.Unity.MainCorals
-  loopDuration: 600
   dataLoader: {fileID: 2116835882}
   config: {fileID: 155714741}
   positive: {fileID: 1896330684}

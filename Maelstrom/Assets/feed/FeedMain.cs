@@ -12,13 +12,14 @@ namespace Maelstrom.Unity
     {
         [Header("Display Settings")]
         [SerializeField] private Vector2 screenSize = new Vector2(1920, 1080);
-        [SerializeField] private float loopDuration = 20.0f; // seconds
 
         [Header("Object Pool Settings")]
         [SerializeField] private FeedDisplayObjectPool displayObjectPool;
 
         [Header("Data Settings")]
         [SerializeField] private FeedDataLoader dataLoader;
+
+        [SerializeField] private Config config;
 
         [Header("Debug")]
         [SerializeField] private bool showDebugInfo = true;
@@ -35,9 +36,11 @@ namespace Maelstrom.Unity
         // Timing
         private float _currentTime = 0.0f;
         private float _lastDebugTime = 0.0f;
+        private float loopDuration;
 
         private void Start()
         {
+            loopDuration = config.Get("loopDuration", 600);
             if (SceneManager.GetActiveScene().name != "FeedScene")
             {
                 return;
@@ -174,6 +177,16 @@ namespace Maelstrom.Unity
             Debug.Log($"  MAELSTROM: {maelstrom.GetCurrentMaelstrom():F3}, " +
                      $"Current Day Retweets: {maelstrom.GetCurrentRetweetCount()}, " +
                      $"Bounds: {maelstrom.GetMinRetweetCount()}-{maelstrom.GetMaxRetweetCount()}");
+
+            // Log circle distribution
+            int firstCircleCount = 0;
+            int secondCircleCount = 0;
+            foreach (var obj in displayObjectPool.GetActiveObjects())
+            {
+                if (obj.IsInFirstCircle) firstCircleCount++;
+                else secondCircleCount++;
+            }
+            Debug.Log($"  CIRCLE DISTRIBUTION: First Circle: {firstCircleCount}, Second Circle: {secondCircleCount}");
         }
 
         // Public methods for external control

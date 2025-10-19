@@ -16,8 +16,8 @@ namespace Maelstrom.Unity
 
         [SerializeField] private PointPool pointPool; // Reference to the point pool for creating new objects
 
-        private Queue<DisplayObject> _activeObjects = new Queue<DisplayObject>();
-        private Queue<DisplayObject> _inactiveObjects = new Queue<DisplayObject>();
+        private Queue<FeedDisplayObject> _activeObjects = new Queue<FeedDisplayObject>();
+        private Queue<FeedDisplayObject> _inactiveObjects = new Queue<FeedDisplayObject>();
         private bool _isInitialized = false;
 
         private Vector2 screenSize;
@@ -46,7 +46,7 @@ namespace Maelstrom.Unity
                 GameObject prefab = pointPool.GetOne();
                 if (prefab != null)
                 {
-                    DisplayObject displayObject = new DisplayObject(prefab);
+                    FeedDisplayObject displayObject = new FeedDisplayObject(prefab);
                     displayObject.SetEnabled(false); // Start inactive
                     _inactiveObjects.Enqueue(displayObject);
                 }
@@ -84,7 +84,7 @@ namespace Maelstrom.Unity
                 GameObject prefab = pointPool.GetOne();
                 if (prefab != null)
                 {
-                    DisplayObject displayObject = new DisplayObject(prefab);
+                    FeedDisplayObject displayObject = new FeedDisplayObject(prefab);
                     displayObject.SetEnabled(false); // Start inactive
                     _inactiveObjects.Enqueue(displayObject);
                     createdCount++;
@@ -107,7 +107,7 @@ namespace Maelstrom.Unity
         /// <summary>
         /// Get a recycled display object from the pool
         /// </summary>
-        public DisplayObject GetRecycledDisplayObject()
+        public FeedDisplayObject GetRecycledDisplayObject()
         {
             if (!_isInitialized)
             {
@@ -115,7 +115,7 @@ namespace Maelstrom.Unity
                 return null;
             }
 
-            DisplayObject displayObject = null;
+            FeedDisplayObject displayObject = null;
 
             // First, try to get from inactive queue
             if (_inactiveObjects.Count > 0)
@@ -164,7 +164,7 @@ namespace Maelstrom.Unity
                 return;
             }
 
-            DisplayObject displayObject = GetRecycledDisplayObject();
+            FeedDisplayObject displayObject = GetRecycledDisplayObject();
             if (displayObject == null)
             {
                 Debug.LogError("No available display objects in pool");
@@ -180,7 +180,7 @@ namespace Maelstrom.Unity
         /// <summary>
         /// Recycle a display object back to the pool
         /// </summary>
-        public void RecycleDisplayObject(DisplayObject displayObject)
+        public void RecycleDisplayObject(FeedDisplayObject displayObject)
         {
             if (displayObject == null) return;
 
@@ -198,7 +198,7 @@ namespace Maelstrom.Unity
         {
             while (_activeObjects.Count > 0)
             {
-                DisplayObject obj = _activeObjects.Peek();
+                FeedDisplayObject obj = _activeObjects.Peek();
                 float objectAge = normalizedCurrentTime - obj.normalizedCreationTime;
 
                 // Handle loop transitions - if object age is negative or very large, 
@@ -234,7 +234,7 @@ namespace Maelstrom.Unity
         /// <summary>
         /// Get all active objects for external iteration
         /// </summary>
-        public Queue<DisplayObject> GetActiveObjects()
+        public Queue<FeedDisplayObject> GetActiveObjects()
         {
             return _activeObjects;
         }
@@ -273,7 +273,7 @@ namespace Maelstrom.Unity
                 // Clean up all active objects
                 while (_activeObjects.Count > 0)
                 {
-                    DisplayObject obj = _activeObjects.Dequeue();
+                    FeedDisplayObject obj = _activeObjects.Dequeue();
                     if (obj != null)
                     {
                         obj.SetEnabled(false);
@@ -283,7 +283,7 @@ namespace Maelstrom.Unity
                 // Clean up inactive objects
                 while (_inactiveObjects.Count > 0)
                 {
-                    DisplayObject obj = _inactiveObjects.Dequeue();
+                    FeedDisplayObject obj = _inactiveObjects.Dequeue();
                     if (obj != null)
                     {
                         obj.SetEnabled(false);
@@ -308,7 +308,7 @@ namespace Maelstrom.Unity
         {
             while (_activeObjects.Count > 0)
             {
-                DisplayObject obj = _activeObjects.Dequeue();
+                FeedDisplayObject obj = _activeObjects.Dequeue();
                 if (obj != null)
                 {
                     obj.SetEnabled(false);

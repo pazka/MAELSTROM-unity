@@ -26,26 +26,12 @@ namespace Maelstrom.Unity
         private int _currentDataIndex = 0;
         private bool _isLooping = false;
 
-        private void Awake()
+        private void Start()
         {
-
-            positive.SetActive(false);
-            negative.SetActive(false);
-            neutral.SetActive(false);
-
-            if (SceneManager.GetActiveScene().name != "CoralsScene")
-            {
-                return;
-            }
 
             positive.SetActive(true);
             negative.SetActive(true);
             neutral.SetActive(true);
-
-        }
-
-        private void Start()
-        {
             loopDuration = config.Get("loopDuration", 600);
             if (SceneManager.GetActiveScene().name != "CoralsScene")
             {
