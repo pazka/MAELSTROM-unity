@@ -13,15 +13,12 @@ namespace Maelstrom.Unity
     {
         private CoralDataBound dataBounds;
         private bool boundsRegistered = false;
-        private float currentMaelstrom = 0f;
         private DateTime currentDate;
         private float currentNegativeSentiment = 0f;
         private float minNegativeSentiment = float.MaxValue;
         private float maxNegativeSentiment = 0f;
-        private const float HIGH_MAELSTROM_THRESHOLD = 0.99f;
-        private const float MEDIUM_MAELSTROM_THRESHOLD = 0.94f;
+        private float currentMaelstrom = 0f;
 
-        private float targetMaelstrom;
 
         /// <summary>
         /// Register data bounds during initial data loading to understand the data shape
@@ -42,32 +39,11 @@ namespace Maelstrom.Unity
         /// </summary>
         public void RegisterData(CoralDataPoint data)
         {
-            UpdateMaelstrom();
+            currentMaelstrom = CommonMaelstrom.UpdateMaelstrom((float)currentNegativeSentiment / (float)maxNegativeSentiment);
 
             this.currentNegativeSentiment = data.neg;
         }
 
-        public void UpdateMaelstrom()
-        {
-            var rnd = new System.Random();
-            var currentRatio = (float)currentNegativeSentiment / (float)maxNegativeSentiment;
-            var newMaelstrom = currentMaelstrom;
-
-            if (rnd.NextDouble() >= HIGH_MAELSTROM_THRESHOLD)
-            {
-                targetMaelstrom = 1;
-            }
-            else if (rnd.NextDouble() >= MEDIUM_MAELSTROM_THRESHOLD)
-            {
-                targetMaelstrom = 0.7f;
-            }
-            else if (targetMaelstrom < 0.7 || (currentMaelstrom - targetMaelstrom) < 0.02)
-            {
-                targetMaelstrom = Mathf.Lerp(currentRatio, currentMaelstrom, 0.01f);
-            }
-
-            currentMaelstrom = Mathf.Lerp(currentMaelstrom, targetMaelstrom, 0.4f);
-        }
 
         /// <summary>
         /// Get the current maelstrom value

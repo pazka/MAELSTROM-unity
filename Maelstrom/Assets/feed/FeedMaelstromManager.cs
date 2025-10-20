@@ -18,10 +18,6 @@ namespace Maelstrom.Unity
         private int currentRetweetCount = 0;
         private int minRetweetCount = int.MaxValue;
         private int maxRetweetCount = 0;
-        private const float HIGH_MAELSTROM_THRESHOLD = 0.99f;
-        private const float MEDIUM_MAELSTROM_THRESHOLD = 0.94f;
-
-        private float targetMaelstrom;
 
         /// <summary>
         /// Register data bounds during initial data loading to understand the data shape
@@ -68,36 +64,13 @@ namespace Maelstrom.Unity
 
             if (isNewDay)
             {
-                UpdateMaelstrom();
                 this.currentDate = currentDate;
                 this.currentRetweetCount = 0;
             }
 
+            currentMaelstrom = CommonMaelstrom.UpdateMaelstrom((float)currentRetweetCount / (float)maxRetweetCount);
+
             this.currentRetweetCount += data.retweetCount;
-        }
-
-        public void UpdateMaelstrom()
-        {
-            var rnd = new System.Random();
-            var currentRatio = maxRetweetCount > 0 ? (float)currentRetweetCount / (float)maxRetweetCount : 0f;
-            var newMaelstrom = currentMaelstrom;
-
-            if (rnd.NextDouble() >= HIGH_MAELSTROM_THRESHOLD)
-            {
-                targetMaelstrom = 1;
-                Debug.Log($"Maelstrom Feed {currentMaelstrom:F3} - High activity day: {currentRetweetCount} retweets");
-            }
-            else if (rnd.NextDouble() >= MEDIUM_MAELSTROM_THRESHOLD)
-            {
-                targetMaelstrom = 0.7f;
-                Debug.Log($"Semi-Maelstrom Feed {currentMaelstrom:F3} - Medium activity day: {currentRetweetCount} retweets");
-            }
-            else if (targetMaelstrom < 0.7 || (currentMaelstrom - targetMaelstrom) < 0.02)
-            {
-                targetMaelstrom = (float)(currentRatio + currentMaelstrom * 0.3);
-            }
-
-            currentMaelstrom = Mathf.Lerp(currentMaelstrom, targetMaelstrom, 0.5f);
         }
 
         /// <summary>

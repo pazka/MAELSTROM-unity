@@ -19,10 +19,6 @@ namespace Maelstrom.Unity
         private int currentAccountCount = 0;
         private int minAccountCount = int.MaxValue;
         private int maxAccountCount = 0;
-        private const float HIGH_MAELSTROM_THRESHOLD = 0.99f;
-        private const float MEDIUM_MAELSTROM_THRESHOLD = 0.94f;
-
-        private float targetMaelstrom;
 
         /// <summary>
         /// Register data bounds during initial data loading to understand the data shape
@@ -67,36 +63,13 @@ namespace Maelstrom.Unity
 
             if (isNewDay)
             {
-                UpdateMaesltrom();
                 this.currentDate = currentDate;
                 this.currentAccountCount = 0;
             }
 
+            currentMaelstrom = CommonMaelstrom.UpdateMaelstrom((float)currentAccountCount / (float)maxAccountCount);
+
             this.currentAccountCount += data.nb_accounts_others;
-        }
-
-        public void UpdateMaesltrom()
-        {
-            var rnd = new System.Random();
-            var currentRatio = (float)currentAccountCount / (float)maxAccountCount;
-            var newMaelstrom = currentMaelstrom;
-
-            if (rnd.NextDouble() >= HIGH_MAELSTROM_THRESHOLD)
-            {
-                targetMaelstrom = 1;
-                Debug.Log($"Maelstrom Ghostnet {currentMaelstrom}");
-            }
-            else if (rnd.NextDouble() >= MEDIUM_MAELSTROM_THRESHOLD)
-            {
-                targetMaelstrom = 0.7f;
-                Debug.Log($"Semi-Maelstrom Ghostnet {currentMaelstrom}");
-            }
-            else if (targetMaelstrom < 0.7 || (currentMaelstrom - targetMaelstrom) < 0.02)
-            {
-                targetMaelstrom = (float)(currentRatio + currentMaelstrom * 0.3);
-            }
-
-            currentMaelstrom = Mathf.Lerp(currentMaelstrom, targetMaelstrom, 0.5f);
         }
 
         /// <summary>
