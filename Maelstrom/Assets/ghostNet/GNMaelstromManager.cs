@@ -58,6 +58,11 @@ namespace Maelstrom.Unity
         /// </summary>
         public void RegisterData(GhostNetDataPoint data)
         {
+            if (!boundsRegistered)
+            {
+                throw new SystemException("no bound to compare maelstrom");
+            }
+
             DateTime currentDate = data.date.Date;
             var isNewDay = currentDate != this.currentDate;
 

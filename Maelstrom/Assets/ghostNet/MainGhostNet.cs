@@ -50,8 +50,13 @@ namespace Maelstrom.Unity
         {
             if (SceneManager.GetActiveScene().name != "GhostNetsScene")
             {
+                gameObject.SetActive(false);
                 return;
             }
+
+            // Initialize UDP service for ghostNet role
+            CommonMaelstrom.InitializeUdpService(2); // 2 = ghostNet
+
 
             if (dataLoader == null)
             {
@@ -112,7 +117,9 @@ namespace Maelstrom.Unity
 
             ProcessDayProgression(normalizedCurrentTime);
 
-            displayObjectPool.UpdateActiveObjects(maelstrom.GetCurrentMaelstrom());
+            // Publish current ghostNet maelstrom to network
+            float localMaelstrom = maelstrom.GetCurrentMaelstrom();
+            displayObjectPool.UpdateActiveObjects(localMaelstrom);
         }
 
 
@@ -309,6 +316,9 @@ namespace Maelstrom.Unity
         {
             // Clean up all objects using the static pool
             displayObjectPool.ClearPool();
+
+            // Clean up UDP service
+            CommonMaelstrom.Cleanup();
 
             Debug.Log($"[GHOSTNET_MAIN] Cleanup completed - Pool size: {displayObjectPool.GetPoolSize()}");
         }

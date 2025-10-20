@@ -39,6 +39,10 @@ namespace Maelstrom.Unity
         /// </summary>
         public void RegisterData(CoralDataPoint data)
         {
+            if (!boundsRegistered)
+            {
+                throw new SystemException("no bound to compare maelstrom");
+            }
             currentMaelstrom = CommonMaelstrom.UpdateMaelstrom((float)currentNegativeSentiment / (float)maxNegativeSentiment);
 
             this.currentNegativeSentiment = data.neg;

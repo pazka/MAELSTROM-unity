@@ -13,7 +13,6 @@ namespace Maelstrom.Unity
         [SerializeField] private int initialPoolSize = 50000;
         [SerializeField] private int maxActiveObjects = 100000;
         [SerializeField] private int maxPoolSize = 100000; // Maximum total pool size to prevent unlimited growth
-        [SerializeField] private int expansionSize = 10000; // How many objects to create when expanding the pool
         [SerializeField] private GhostNetPointPool ghostNetPointPool; // Reference to the point pool for creating new objects
 
         private Queue<GhostNetDisplayObject> _activeObjects = new Queue<GhostNetDisplayObject>();

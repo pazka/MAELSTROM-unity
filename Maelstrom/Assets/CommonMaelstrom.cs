@@ -16,10 +16,56 @@ namespace Maelstrom.Unity
         private static float currentMaelstrom = 0f;
         private static float targetMaelstrom = 0f;
 
+        // UDP Network Integration
+        private static IMaelstromUdpService _udpService;
+        private static bool _isInitialized = false;
+
+        /// <summary>
+        /// Initialize the UDP service with the specified role
+        /// </summary>
+        /// <param name="roleId">1=corals, 2=ghostNet, 3=feed</param>
+        public static void InitializeUdpService(ushort roleId)
+        {
+            if (_isInitialized) return;
+
+            _udpService = new MaelstromUdpService();
+            _udpService.SetLocalRole(roleId);
+            _udpService.Start();
+            _isInitialized = true;
+
+            Debug.Log($"UDP Service initialized for role: {roleId}");
+        }
+
+        /// <summary>
+        /// Cleanup UDP service resources
+        /// </summary>
+        public static void Cleanup()
+        {
+            if (_isInitialized)
+            {
+                _udpService?.Dispose();
+                _udpService = null;
+                _isInitialized = false;
+            }
+        }
+
+        private static float[] GetExternalMaelstroms()
+        {
+            if (!_isInitialized) return new float[] { };
+
+            return _udpService.GetExternalMaelstroms();
+        }
+
         public static float UpdateMaelstrom(float currentRatio)
         {
             var rnd = new System.Random();
-            var netRnd = rnd.NextDouble();
+            var externalMaelstroms = GetExternalMaelstroms();
+            var externalMaelstrom = externalMaelstroms.Length > 0 ? externalMaelstroms.Sum() / externalMaelstroms.Length : 0f;
+            if (externalMaelstrom > 0)
+            {
+                Debug.Log($"Ext.Mal ({externalMaelstrom})");
+            }
+            var netRnd = rnd.NextDouble() + externalMaelstrom;
 
             if ((currentMaelstrom - targetMaelstrom) < 0.002f)
             {
@@ -42,6 +88,10 @@ namespace Maelstrom.Unity
 
             currentMaelstrom = Mathf.Lerp(currentMaelstrom, targetMaelstrom, 0.1f);
 
+            if (_isInitialized)
+            {
+                _udpService.PublishCurrenMaelstrom(currentMaelstrom);
+            }
             return currentMaelstrom;
         }
     }

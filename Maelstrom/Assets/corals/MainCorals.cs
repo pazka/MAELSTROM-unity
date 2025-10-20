@@ -28,16 +28,19 @@ namespace Maelstrom.Unity
 
         private void Start()
         {
+            if (SceneManager.GetActiveScene().name != "CoralsScene")
+            {
+                gameObject.SetActive(false);
+                return;
+            }
+
+            // Initialize UDP service for corals role
+            CommonMaelstrom.InitializeUdpService(1); // 1 = corals
 
             positive.SetActive(true);
             negative.SetActive(true);
             neutral.SetActive(true);
             loopDuration = config.Get("loopDuration", 600);
-            if (SceneManager.GetActiveScene().name != "CoralsScene")
-            {
-                return;
-            }
-
             if (dataLoader == null)
             {
                 throw new System.Exception("CoralDataLoader not found! Please assign a CoralDataLoader component.");
@@ -167,16 +170,16 @@ namespace Maelstrom.Unity
 
         private void UpdateCoralsAlpha(float alphaPos, float alphaNeu, float alphaNeg)
         {
-            float maelstromValue = _maelstromManager.GetCurrentMaelstrom();
+            float localMaelstromValue = _maelstromManager.GetCurrentMaelstrom();
 
             positive.GetComponent<Renderer>().material.SetFloat("_Opacity", alphaPos);
-            positive.GetComponent<Renderer>().material.SetFloat("_Maelstrom", maelstromValue);
+            positive.GetComponent<Renderer>().material.SetFloat("_Maelstrom", localMaelstromValue);
 
             neutral.GetComponent<Renderer>().material.SetFloat("_Opacity", alphaNeu);
-            neutral.GetComponent<Renderer>().material.SetFloat("_Maelstrom", maelstromValue);
+            neutral.GetComponent<Renderer>().material.SetFloat("_Maelstrom", localMaelstromValue);
 
             negative.GetComponent<Renderer>().material.SetFloat("_Opacity", alphaNeg);
-            negative.GetComponent<Renderer>().material.SetFloat("_Maelstrom", maelstromValue);
+            negative.GetComponent<Renderer>().material.SetFloat("_Maelstrom", localMaelstromValue);
         }
 
 
@@ -193,6 +196,11 @@ namespace Maelstrom.Unity
         public int GetCurrentDataIndex()
         {
             return _currentDataIndex;
+        }
+
+        private void OnDestroy()
+        {
+            CommonMaelstrom.Cleanup();
         }
     }
 }

@@ -40,11 +40,15 @@ namespace Maelstrom.Unity
 
         private void Start()
         {
-            loopDuration = config.Get("loopDuration", 600);
             if (SceneManager.GetActiveScene().name != "FeedScene")
             {
+                gameObject.SetActive(false);
                 return;
             }
+            // Initialize UDP service for feed role
+            CommonMaelstrom.InitializeUdpService(3); // 3 = feed
+
+            loopDuration = config.Get("loopDuration", 600);
 
             if (dataLoader == null)
             {
@@ -111,8 +115,10 @@ namespace Maelstrom.Unity
             // Then, activate objects for new data points
             ActivateObjectsForNewData(normalizedCurrentTime);
 
-            // Update all active objects with current maelstrom value
-            displayObjectPool.UpdateActiveObjects(maelstrom.GetCurrentMaelstrom());
+            // Publish current feed maelstrom to network
+            float localMaelstrom = maelstrom.GetCurrentMaelstrom();
+
+            displayObjectPool.UpdateActiveObjects(localMaelstrom);
         }
 
         private void ActivateObjectsForNewData(float normalizedCurrentTime)
@@ -262,6 +268,9 @@ namespace Maelstrom.Unity
                 {
                     displayObjectPool.ClearPool();
                 }
+
+                // Clean up UDP service
+                CommonMaelstrom.Cleanup();
 
                 Debug.Log($"[FEED_MAIN] Cleanup completed - Pool size: {displayObjectPool?.GetPoolSize() ?? 0}");
             }

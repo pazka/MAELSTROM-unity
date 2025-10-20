@@ -56,7 +56,7 @@ namespace Maelstrom.Unity
         public void Initialize()
         {
             _configPath = Path.Combine(Application.dataPath, "config.json");
-            Debug.Log($"Config path: {_configPath}");
+            //    Debug.Log($"Config path: {_configPath}");
             LoadConfig();
         }
 
@@ -177,8 +177,8 @@ namespace Maelstrom.Unity
 
                 _isLoaded = true;
                 UpdateInspectorDisplay();
-                Debug.Log($"Configuration loaded with {_config.Count} entries");
-                Debug.Log($"Configuration: {JsonUtility.ToJson(_config, true)}");
+                // Debug.Log($"Configuration loaded with {_config.Count} entries");
+                // Debug.Log($"Configuration: {JsonUtility.ToJson(_config, true)}");
             }
             catch (Exception e)
             {

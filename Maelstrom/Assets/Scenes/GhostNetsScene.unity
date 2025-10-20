@@ -594,7 +594,6 @@ MonoBehaviour:
   initialPoolSize: 10000
   maxActiveObjects: 100000
   maxPoolSize: 500000
-  expansionSize: 10000
   ghostNetPointPool: {fileID: 1643472411}
 --- !u!4 &1743257721
 Transform:
