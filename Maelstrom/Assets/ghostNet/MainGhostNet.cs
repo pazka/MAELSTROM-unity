@@ -54,8 +54,6 @@ namespace Maelstrom.Unity
                 return;
             }
 
-            // Initialize UDP service for ghostNet role
-            CommonMaelstrom.InitializeUdpService(2); // 2 = ghostNet
 
 
             if (dataLoader == null)
@@ -74,6 +72,8 @@ namespace Maelstrom.Unity
             }
 
             loopDuration = Config.Get<int>("loopDuration", 600);
+            // Initialize UDP service for ghostNet role
+            CommonMaelstrom.InitializeUdpService(2); // 2 = ghostNet
         }
 
         private void Update()

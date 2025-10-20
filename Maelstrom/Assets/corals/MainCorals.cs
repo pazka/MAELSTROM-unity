@@ -34,9 +34,6 @@ namespace Maelstrom.Unity
                 return;
             }
 
-            // Initialize UDP service for corals role
-            CommonMaelstrom.InitializeUdpService(1); // 1 = corals
-
             positive.SetActive(true);
             negative.SetActive(true);
             neutral.SetActive(true);
@@ -55,6 +52,9 @@ namespace Maelstrom.Unity
             {
                 Debug.Log("Waiting for corals data to load...");
             }
+
+            // Initialize UDP service for corals role
+            CommonMaelstrom.InitializeUdpService(1); // 1 = corals
 
         }
 

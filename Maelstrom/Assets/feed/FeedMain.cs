@@ -45,8 +45,11 @@ namespace Maelstrom.Unity
                 gameObject.SetActive(false);
                 return;
             }
+
+            if (Display.displays.Length > 1)
+                Display.displays[1].Activate();
+
             // Initialize UDP service for feed role
-            CommonMaelstrom.InitializeUdpService(3); // 3 = feed
 
             loopDuration = config.Get("loopDuration", 600);
 
@@ -69,6 +72,8 @@ namespace Maelstrom.Unity
             {
                 Debug.Log("Waiting for data to load...");
             }
+
+            CommonMaelstrom.InitializeUdpService(3); // 3 = feed
         }
 
         private void Update()

@@ -39,15 +39,15 @@ namespace Maelstrom.Unity
             udpClientV4.JoinMulticastGroup(mAddrV4);
             multicastEndpointV4 = new IPEndPoint(mAddrV4, port);
 
-            // IPv6 client (dual mode not reliable for multicast joins across families)
+            // IPv6 client - must bind to port before joining multicast group
             udpClientV6 = new UdpClient(AddressFamily.InterNetworkV6);
             udpClientV6.ExclusiveAddressUse = false;
-            udpClientV6.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
             udpClientV6.Client.Bind(new IPEndPoint(IPAddress.IPv6Any, port));
-            udpClientV6.Client.DualMode = true; // allow IPv4-mapped if available
+
             var mAddrV6 = IPAddress.Parse(multicastAddressV6);
-            // Join without interface index uses default interface; configurable index can be added later
-            udpClientV6.JoinMulticastGroup(mAddrV6);
+            // Join IPv6 multicast group with interface index 0 (default interface)
+            // According to MS docs, interface index is required for IPv6
+            udpClientV6.JoinMulticastGroup(0, mAddrV6);
             multicastEndpointV6 = new IPEndPoint(mAddrV6, port);
 
             receiveLoopTaskV4 = Task.Run(ReceiveLoopV4Async);
