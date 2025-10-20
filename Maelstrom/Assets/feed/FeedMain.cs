@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using UnityEngine;
 using System;
 using UnityEngine.SceneManagement;
@@ -33,6 +32,7 @@ namespace Maelstrom.Unity
         private System.Random _random = new System.Random();
         private DateTime _currentDisplayedDate = DateTime.MinValue;
 
+        [SerializeField] private PureDataConnector pureDataConnector;
         // Timing
         private float _currentTime = 0.0f;
         private float _lastDebugTime = 0.0f;
@@ -73,7 +73,7 @@ namespace Maelstrom.Unity
                 Debug.Log("Waiting for data to load...");
             }
 
-            CommonMaelstrom.InitializeUdpService(3); // 3 = feed
+            CommonMaelstrom.InitializeUdpService(3, pureDataConnector); // 3 = feed
         }
 
         private void Update()

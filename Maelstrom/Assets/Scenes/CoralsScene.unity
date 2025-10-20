@@ -540,8 +540,9 @@ GameObject:
   m_Component:
   - component: {fileID: 1000416833}
   - component: {fileID: 1000416832}
+  - component: {fileID: 1000416834}
   m_Layer: 0
-  m_Name: MainScript
+  m_Name: CoralMainScript
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -564,6 +565,7 @@ MonoBehaviour:
   positive: {fileID: 1896330684}
   negative: {fileID: 2098708237}
   neutral: {fileID: 178319257}
+  pureDataConnector: {fileID: 1000416834}
 --- !u!4 &1000416833
 Transform:
   m_ObjectHideFlags: 0
@@ -579,6 +581,18 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1000416834
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1000416831}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c9c5d89d4d887744788a384994bbfd77, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Maelstrom.Unity.PureDataConnector
 --- !u!1 &1896330684
 GameObject:
   m_ObjectHideFlags: 0

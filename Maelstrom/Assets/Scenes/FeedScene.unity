@@ -597,8 +597,9 @@ GameObject:
   m_Component:
   - component: {fileID: 537650877}
   - component: {fileID: 537650878}
+  - component: {fileID: 537650879}
   m_Layer: 0
-  m_Name: MainScript
+  m_Name: FeedMainScript
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -637,6 +638,19 @@ MonoBehaviour:
   config: {fileID: 916045375}
   showDebugInfo: 1
   debugUpdateInterval: 5
+  pureDataConnector: {fileID: 537650879}
+--- !u!114 &537650879
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 537650876}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c9c5d89d4d887744788a384994bbfd77, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Maelstrom.Unity.PureDataConnector
 --- !u!1 &916045374
 GameObject:
   m_ObjectHideFlags: 0

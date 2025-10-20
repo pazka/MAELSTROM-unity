@@ -1,5 +1,5 @@
 # ======================================================
-#  Windows 11 Setup Script for Exhibition
+#  Windows 11 Setup Script for Exhibition Don't forget about start ms-cxh:localonly
 # ======================================================
 
 Write-Host "Starting setup..." -ForegroundColor Cyan
@@ -27,7 +27,6 @@ Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Notifica
 
 Write-Host "Notifications disabled." -ForegroundColor Green
 
-
 # ------------------------------------------------------
 # Enable SSH Server
 # ------------------------------------------------------
@@ -37,14 +36,12 @@ Set-Service -Name sshd -StartupType 'Automatic'
 Start-Service sshd
 Write-Host "SSH Server enabled and started." -ForegroundColor Green
 
-
 # ------------------------------------------------------
 # Allow inbound ping (ICMPv4)
 # ------------------------------------------------------
 Write-Host "Allowing ICMPv4 Echo Request (ping)..." -ForegroundColor Cyan
 New-NetFirewallRule -DisplayName "Allow ICMPv4-In" -Protocol ICMPv4 -Direction Inbound -Action Allow -Profile Any
 Write-Host "Ping allowed." -ForegroundColor Green
-
 
 # ------------------------------------------------------
 # Share C: drive on network with full control
@@ -55,16 +52,22 @@ $sharePath = "C:\"
 New-SmbShare -Name $shareName -Path $sharePath -FullAccess "Authenticated Users"
 Write-Host "C: drive shared with full control for logged users." -ForegroundColor Green
 
-
 # ------------------------------------------------------
 # Manage users
 # ------------------------------------------------------
-
 Write-Host "Creating admin user 'mini' with password 'mini'..." -ForegroundColor Cyan
 net user mini mini /add
 net localgroup Administrators mini /add
 Write-Host "Admin user 'mini' created." -ForegroundColor Green
 
+# Grant full control of C:\Users\user to mini
+Write-Host "Granting full control of C:\Users\user to 'mini'..." -ForegroundColor Cyan
+$acl = Get-Acl "C:\Users\user"
+$permission = "mini","FullControl","Allow"
+$accessRule = New-Object System.Security.AccessControl.FileSystemAccessRule $permission
+$acl.SetAccessRule($accessRule)
+Set-Acl -Path "C:\Users\user" -AclObject $acl
+Write-Host "Full control granted to 'mini' for C:\Users\user." -ForegroundColor Green
 
 # ------------------------------------------------------
 # Add program to startup (start.cmd from Desktop)
@@ -84,6 +87,40 @@ if (Test-Path $desktopPath) {
 } else {
     Write-Host "Warning: start.cmd not found on Desktop. Please place it there before next login." -ForegroundColor Yellow
 }
+
+# ------------------------------------------------------
+# Allow firewall rules
+# ------------------------------------------------------
+# Set the port you use in Unity
+Write-Host "Allow firewall rules..." -ForegroundColor Cyan
+$port = 5000
+
+# Allow inbound UDP for IPv4
+New-NetFirewallRule -DisplayName "Unity UDP Broadcast IPv4" `
+    -Direction Inbound `
+    -Protocol UDP `
+    -LocalPort $port `
+    -Action Allow `
+    -Profile Any
+
+# Allow inbound UDP for IPv6
+New-NetFirewallRule -DisplayName "Unity UDP Multicast IPv6" `
+    -Direction Inbound `
+    -Protocol UDP `
+    -LocalPort $port `
+    -RemoteAddress "LocalSubnet","FF02::/16" `
+    -Action Allow `
+    -Profile Any
+
+# Optional: allow outbound UDP (usually allowed by default)
+New-NetFirewallRule -DisplayName "Unity UDP Outbound" `
+    -Direction Outbound `
+    -Protocol UDP `
+    -LocalPort $port `
+    -Action Allow `
+    -Profile Any
+
+Write-Host "Firewall rules added for UDP port $port (IPv4 broadcast + IPv6 multicast)"
 
 
 # ------------------------------------------------------

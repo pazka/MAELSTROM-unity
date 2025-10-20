@@ -18,6 +18,9 @@ namespace Maelstrom.Unity
         // Returns external maelstrom value for the specified key
         float[] GetExternalMaelstroms();
 
+        // Returns all current maelstrom keys and their values (including local)
+        IReadOnlyDictionary<string, float> GetAllMaelstroms();
+
         // Start/Stop background receive loop
         void Start();
         void Stop();

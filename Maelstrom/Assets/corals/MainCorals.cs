@@ -1,7 +1,6 @@
 
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using System;
 
 namespace Maelstrom.Unity
 {
@@ -17,11 +16,12 @@ namespace Maelstrom.Unity
         [SerializeField] private GameObject positive;
         [SerializeField] private GameObject negative;
         [SerializeField] private GameObject neutral;
+        [SerializeField] private PureDataConnector pureDataConnector;
 
         // Timing
         private float _currentTime = 0.0f;
         private CoralDataPoint[] _data;
-        private CoralsMaelstromManager _maelstromManager;
+        [SerializeField] private CoralsMaelstromManager _maelstromManager;
         private float loopDuration;
         private int _currentDataIndex = 0;
         private bool _isLooping = false;
@@ -54,7 +54,7 @@ namespace Maelstrom.Unity
             }
 
             // Initialize UDP service for corals role
-            CommonMaelstrom.InitializeUdpService(1); // 1 = corals
+            CommonMaelstrom.InitializeUdpService(1, pureDataConnector); // 1 = corals
 
         }
 

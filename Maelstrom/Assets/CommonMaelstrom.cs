@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Unity;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -19,15 +20,17 @@ namespace Maelstrom.Unity
         // UDP Network Integration
         private static IMaelstromUdpService _udpService;
         private static bool _isInitialized = false;
+        private static PureDataConnector _pureData;
 
         /// <summary>
         /// Initialize the UDP service with the specified role
         /// </summary>
         /// <param name="roleId">1=corals, 2=ghostNet, 3=feed</param>
-        public static void InitializeUdpService(ushort roleId)
+        public static void InitializeUdpService(ushort roleId, PureDataConnector pureData)
         {
             if (_isInitialized) return;
 
+            _pureData = pureData;
             _udpService = new MaelstromUdpService();
             _udpService.SetLocalRole(roleId);
             _udpService.Start();
@@ -91,6 +94,12 @@ namespace Maelstrom.Unity
             if (_isInitialized)
             {
                 _udpService.PublishCurrenMaelstrom(currentMaelstrom);
+
+                var allMaelstroms = _udpService.GetAllMaelstroms();
+                foreach (var kvp in allMaelstroms)
+                {
+                    _pureData.SendOscMessage(kvp.Key, kvp.Value);
+                }
             }
             return currentMaelstrom;
         }

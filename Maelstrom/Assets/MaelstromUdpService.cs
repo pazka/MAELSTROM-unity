@@ -13,8 +13,8 @@ namespace Maelstrom.Unity
     public class MaelstromUdpService : IMaelstromUdpService
     {
         private const int DefaultPort = 5000;
-        private const string DefaultMulticastAddressV4 = "239.0.0.1";
-        private const string DefaultMulticastAddressV6 = "ff12::1234"; // site-local, transient
+        private const string DefaultMulticastAddressV4 = "192.168.1.255";
+        private const string DefaultMulticastAddressV6 = "ff02::1"; // site-local, transient
 
         // Dual-stack: separate clients for IPv4 and IPv6
         private readonly UdpClient udpClientV4;
@@ -30,14 +30,13 @@ namespace Maelstrom.Unity
 
         public MaelstromUdpService(int port = DefaultPort, string multicastAddressV4 = DefaultMulticastAddressV4, string multicastAddressV6 = DefaultMulticastAddressV6)
         {
-            // IPv4 client
+            // IPv4 client (broadcast)
             udpClientV4 = new UdpClient(AddressFamily.InterNetwork);
             udpClientV4.ExclusiveAddressUse = false;
             udpClientV4.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
             udpClientV4.Client.Bind(new IPEndPoint(IPAddress.Any, port));
-            var mAddrV4 = IPAddress.Parse(multicastAddressV4);
-            udpClientV4.JoinMulticastGroup(mAddrV4);
-            multicastEndpointV4 = new IPEndPoint(mAddrV4, port);
+            udpClientV4.EnableBroadcast = true; // allow broadcast
+            multicastEndpointV4 = new IPEndPoint(IPAddress.Parse(multicastAddressV4), port); // keep 192.168.1.255
 
             // IPv6 client - must bind to port before joining multicast group
             udpClientV6 = new UdpClient(AddressFamily.InterNetworkV6);
@@ -46,9 +45,9 @@ namespace Maelstrom.Unity
 
             var mAddrV6 = IPAddress.Parse(multicastAddressV6);
             // Join IPv6 multicast group with interface index 0 (default interface)
-            // According to MS docs, interface index is required for IPv6
             udpClientV6.JoinMulticastGroup(0, mAddrV6);
             multicastEndpointV6 = new IPEndPoint(mAddrV6, port);
+
 
             receiveLoopTaskV4 = Task.Run(ReceiveLoopV4Async);
             receiveLoopTaskV6 = Task.Run(ReceiveLoopV6Async);
@@ -68,6 +67,7 @@ namespace Maelstrom.Unity
 
         public void PublishCurrenMaelstrom(float maelstrom)
         {
+            localMaelstrom = Clamp01(maelstrom);
             var payload = EncodeBinary(localRoleId, maelstrom);
             if (payload == null) return;
             try { udpClientV4.Send(payload, payload.Length, multicastEndpointV4); } catch { }
@@ -95,6 +95,22 @@ namespace Maelstrom.Unity
                 result[i++] = Clamp01(v);
             }
             return result;
+        }
+
+        public IReadOnlyDictionary<string, float> GetAllMaelstroms()
+        {
+            var allMaelstroms = new Dictionary<string, float>(externalMaelstrom);
+
+            if (localRoleId != 0)
+            {
+                string localKey = RoleToKey(localRoleId);
+                if (localKey != null)
+                {
+                    allMaelstroms[localKey] = localMaelstrom;
+                }
+            }
+
+            return allMaelstroms;
         }
 
         private async Task ReceiveLoopV4Async()

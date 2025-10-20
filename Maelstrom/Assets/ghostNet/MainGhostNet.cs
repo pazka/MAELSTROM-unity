@@ -3,8 +3,6 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-// GhostNetDisplayObjectPool is a separate class for managing object pooling
 
 namespace Maelstrom.Unity
 {
@@ -43,6 +41,7 @@ namespace Maelstrom.Unity
         private int _currentDayDataIndex = 0;
         private float _dayProgress = 0f; // 0 to 1, progress through current day
 
+        [SerializeField] private PureDataConnector pureDataConnector;
         // Timing
         private float _currentTime = 0.0f;
         private float _lastDebugTime = 0.0f;
@@ -73,7 +72,7 @@ namespace Maelstrom.Unity
 
             loopDuration = Config.Get<int>("loopDuration", 600);
             // Initialize UDP service for ghostNet role
-            CommonMaelstrom.InitializeUdpService(2); // 2 = ghostNet
+            CommonMaelstrom.InitializeUdpService(2, pureDataConnector); // 2 = ghostNet
         }
 
         private void Update()
