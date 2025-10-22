@@ -112,9 +112,9 @@ Shader "Custom/Caustic"
                 squareUv = float2(squareUv.x, squareUv.y);
                 squareUv = mul(rotate2d(30*_Seed), squareUv);
 
-                float t = _Time * (1+pow(3*_Seed+3,3));
+                float t = _Time * (1+pow(3*_Seed+3,3))*0.1;
                 float v = 0.0;
-                float sizeDistortion = amplitude;
+                float sizeDistortion = amplitude/10;
 
                 v += voronoi(squareUv, t * 2.0, 0.5 + amplitude, 2.5 - sizeDistortion + amplitude);
                 amplitude = amplitude/2;

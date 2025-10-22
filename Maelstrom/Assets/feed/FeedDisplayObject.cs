@@ -79,7 +79,7 @@ namespace Maelstrom.Unity
             if (gameObject != null)
             {
                 Vector3 currentPosition = gameObject.transform.position;
-                Vector3 newPosition = currentPosition + new Vector3(velocity.x, velocity.y, 0) * deltaTime;
+                Vector3 newPosition = currentPosition + new Vector3(velocity.x, velocity.y, 0) * deltaTime * 0.1f;
 
                 // Check if object has moved outside current circle
                 Vector2 currentCenter = isInFirstCircle ? circleCenter1 : circleCenter2;
