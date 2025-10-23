@@ -72,18 +72,6 @@ namespace Maelstrom.Unity
         }
 
         /// <summary>
-        /// Return a GameObject to the pool
-        /// </summary>
-        public void ReturnObject(GameObject obj)
-        {
-            if (obj != null && _allObjects.Contains(obj))
-            {
-                obj.SetActive(false);
-                _availableObjects.Enqueue(obj);
-            }
-        }
-
-        /// <summary>
         /// Get count of available objects
         /// </summary>
         public int AvailableCount => _availableObjects.Count;

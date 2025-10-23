@@ -139,7 +139,7 @@ namespace Maelstrom.Unity
                     // Register data with maelstrom manager for daily retweet counting
                     maelstrom.RegisterData(dataPoint);
 
-                    displayObjectPool.ActivateDataPoint(dataPoint, normalizedCurrentTime);
+                    displayObjectPool.ActivateDataPoint(dataPoint, normalizedCurrentTime,maelstrom.GetCurrentMaelstrom());
                     _currentDisplayedDate = dataPoint.date;
                     _currentDataIndex++;
                 }
@@ -188,16 +188,6 @@ namespace Maelstrom.Unity
             Debug.Log($"  MAELSTROM: {maelstrom.GetCurrentMaelstrom():F3}, " +
                      $"Current Day Retweets: {maelstrom.GetCurrentRetweetCount()}, " +
                      $"Bounds: {maelstrom.GetMinRetweetCount()}-{maelstrom.GetMaxRetweetCount()}");
-
-            // Log circle distribution
-            int firstCircleCount = 0;
-            int secondCircleCount = 0;
-            foreach (var obj in displayObjectPool.GetActiveObjects())
-            {
-                if (obj.IsInFirstCircle) firstCircleCount++;
-                else secondCircleCount++;
-            }
-            Debug.Log($"  CIRCLE DISTRIBUTION: First Circle: {firstCircleCount}, Second Circle: {secondCircleCount}");
         }
 
         // Public methods for external control

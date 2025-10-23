@@ -7,16 +7,16 @@ using UnityEngine.SceneManagement;
 
 namespace Maelstrom.Unity
 {
-    /**
-    "dateday","screen_name","nb_tweets","followers_count"
-"2023-02-07","##OTHERS##","11966",9916
-"2023-02-07","RER_A","130",257043
-"2023-02-07","RERB","115",151203
-"2023-02-07","BFMTV","54",4547979
-"2023-02-07","Ligne13_RATP","49",58633
-"2023-02-07","ClientsRATP","32",68539
-"2023-02-07","BFMParis","22",118137
-"2023-02-07","Ligne4_RATP","21",46979
+    /**"dateday","screen_name","nb_tweets","avg_followers_count","nb_account_if_others"
+"2023-02-07","##OTHERS##","11966","999","8696"
+"2023-02-07","RER_A","130","257043","1"
+"2023-02-07","RERB","115","151203","1"
+"2023-02-07","BFMTV","54","4547979","1"
+"2023-02-07","Ligne13_RATP","49","58633","1"
+"2023-02-07","ClientsRATP","32","68539","1"
+"2023-02-07","BFMParis","22","118137","1"
+"2023-02-07","Ligne4_RATP","21","46979","1"
+"2023-02-07","Ligne8_RATP","17","53259","1"
 */
     public struct GhostNetDataPoint
     {
@@ -130,7 +130,19 @@ namespace Maelstrom.Unity
                     throw new System.Exception("Data is not in chronological order");
                 }
 
-                dataList.Add(dataPoint);
+                //spread others here
+                for (int otherIndex = 0; otherIndex < nbAccountsOthers; otherIndex++)
+                {
+                    dataList.Add(new GhostNetDataPoint
+                    {
+                        date = date,
+                        screen_name = screenName,
+                        nb_tweets = nbTweets,
+                        followers_count = followersCount,
+                        nb_accounts_others = 1,
+                        isAggregated = screenName == "##OTHERS##"
+                    });
+                }
             }
 
             _data = dataList.ToArray();
@@ -191,6 +203,7 @@ namespace Maelstrom.Unity
                         (float)(_data[j].nb_tweets - _dataBounds.Min.nb_tweets) / tweetsRange : 0;
                     _data[j].normalizedFollowersCount = followersRange > 0 ?
                         (float)(_data[j].followers_count - _dataBounds.Min.followers_count) / followersRange : 0;
+
                     _data[j].normalizedDate = (float)((_data[j].date.Ticks - _dataBounds.Min.date.Ticks) / dateRange);
                 }
             }

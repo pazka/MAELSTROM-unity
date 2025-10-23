@@ -95,7 +95,7 @@ namespace Maelstrom.Unity
 
         public void Update(float deltaTime, float maelstrom)
         {
-            float elapsedTime = (Time.time - createdGameTime) * 0.1f;
+            float elapsedTime = (Time.time - createdGameTime) * 1f;
 
             // Apply maelstrom amplification to angular velocity
             float amplifiedAngularVelocity = angularVelocity * (1f + maelstrom);

@@ -149,7 +149,7 @@ namespace Maelstrom.Unity
         /// <summary>
         /// Activate display objects for a data point (handles the full activation logic)
         /// </summary>
-        public void ActivateDataPoint(FeedDataPoint dataPoint, float normalizedCreationTime)
+        public void ActivateDataPoint(FeedDataPoint dataPoint, float normalizedCreationTime,float maelstrom = 0f)
         {
             if (!_isInitialized)
             {
@@ -172,7 +172,7 @@ namespace Maelstrom.Unity
             }
 
             // Let the display object handle its own initialization based on data point
-            displayObject.InitializeFromDataPoint(dataPoint, screenSize, normalizedCreationTime);
+            displayObject.InitializeFromDataPoint(dataPoint, screenSize, normalizedCreationTime,maelstrom);
             displayObject.SetEnabled(true);
             _activeObjects.Enqueue(displayObject);
         }

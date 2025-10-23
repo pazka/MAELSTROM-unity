@@ -162,30 +162,25 @@ namespace Maelstrom.Unity
                 return;
             }
 
-            // Use nb_accounts_others if available, otherwise default to 1
-            int accountsToDisplay = dataPoint.nb_accounts_others > 0 ? dataPoint.nb_accounts_others : 1;
 
-            for (var i = 0; i < accountsToDisplay; i++)
+            // Check if we've reached the limit
+            if (_activeObjects.Count >= maxActiveObjects)
             {
-                // Check if we've reached the limit
-                if (_activeObjects.Count >= maxActiveObjects)
-                {
-                    Debug.LogWarning($"Max active objects limit reached during activation: {maxActiveObjects}");
-                    break;
-                }
-
-                GhostNetDisplayObject displayObject = GetRecycledDisplayObject();
-                if (displayObject == null)
-                {
-                    Debug.LogError("No available display objects in pool");
-                    break;
-                }
-
-                // Let the display object handle its own initialization based on data point
-                displayObject.InitializeFromDataPoint(dataPoint, screenSize, normalizedCreationtime);
-                displayObject.SetEnabled(true);
-                _activeObjects.Enqueue(displayObject);
+                Debug.LogWarning($"Max active objects limit reached during activation: {maxActiveObjects}");
+                return;
             }
+
+            GhostNetDisplayObject displayObject = GetRecycledDisplayObject();
+            if (displayObject == null)
+            {
+                Debug.LogError("No available display objects in pool");
+                return;
+            }
+
+            // Let the display object handle its own initialization based on data point
+            displayObject.InitializeFromDataPoint(dataPoint, screenSize, normalizedCreationtime);
+            displayObject.SetEnabled(true);
+            _activeObjects.Enqueue(displayObject);
         }
 
         /// <summary>

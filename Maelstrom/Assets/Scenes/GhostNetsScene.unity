@@ -463,7 +463,7 @@ MonoBehaviour:
   autoRefresh: 1
   configEntries:
   - key: loopDuration
-    value: 600
+    value: 1200
     type: Int32
 --- !u!1 &1567655189
 GameObject:
