@@ -16,6 +16,7 @@ namespace Maelstrom.Unity
 
         private static float currentMaelstrom = 0f;
         private static float targetMaelstrom = 0f;
+        private static Queue<float> maelstromHistory = new Queue<float>();
 
         // UDP Network Integration
         private static IMaelstromUdpService _udpService;
@@ -70,6 +71,9 @@ namespace Maelstrom.Unity
             }
             var netRnd = rnd.NextDouble() + externalMaelstrom;
 
+            // Check if any previous maelstrom values were above 0.7
+            bool hasHighPreviousValues = maelstromHistory.Any(value => value >= 0.7f);
+
             if ((currentMaelstrom - targetMaelstrom) < 0.002f)
             {
                 if (currentRatio > 0.3 && netRnd >= HIGH_MAELSTROM_THRESHOLD)
@@ -89,7 +93,16 @@ namespace Maelstrom.Unity
                 }
             }
 
-            currentMaelstrom = Mathf.Lerp(currentMaelstrom, targetMaelstrom, 0.1f);
+            // Use inertia only if previous values were above 0.7
+            float lerpSpeed = hasHighPreviousValues ? 0.001f : 0.01f;
+            currentMaelstrom = Mathf.Lerp(currentMaelstrom, targetMaelstrom, lerpSpeed);
+
+            // Store current maelstrom in history (keep max 100 values)
+            maelstromHistory.Enqueue(currentMaelstrom);
+            if (maelstromHistory.Count > 100)
+            {
+                maelstromHistory.Dequeue();
+            }
 
             if (_isInitialized)
             {

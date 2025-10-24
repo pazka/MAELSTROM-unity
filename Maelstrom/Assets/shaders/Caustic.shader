@@ -119,7 +119,7 @@ Shader "Custom/Caustic"
                     borderAlpha = borderAlpha - (borderSize - (1-uv.y ))/borderSize;
                 }
 
-                return borderAlpha;
+                return clamp(borderAlpha, 0, 1);
             }
 
             half4 frag(Varyings IN) : SV_Target
@@ -134,9 +134,9 @@ Shader "Custom/Caustic"
 
                 float t = _Time * (1+pow(3*_Seed+3,3))*0.1;
                 float v = 0.0;
-                float sizeDistortion = amplitude/10;
+                float sizeDistortion = amplitude/10 - amplitude*amplitude;
 
-                v += voronoi(squareUv, t * 2.0, 0.5 + amplitude, 2.5 - sizeDistortion + amplitude);
+                v += voronoi(squareUv, t * 2.0, 0.5 + amplitude, 5 - sizeDistortion);
                 amplitude = amplitude/2;
               //  v += voronoi(squareUv, t * 2.0, 0.0 + amplitude, 4.0 - sizeDistortion + amplitude);
 

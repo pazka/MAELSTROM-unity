@@ -696,7 +696,7 @@ Material:
     - _EnableExternalAlpha: 0
     - _Maelstrom: 0
     - _Opacity: 1
-    - _Seed: 1
+    - _Seed: 0
     - _Time: 0
     - _ZWrite: 0
     - _iMaelstrom: 1
@@ -845,7 +845,7 @@ MonoBehaviour:
     colorValue: {r: 0, g: 0, b: 0, a: 0}
   - propertyName: _Seed
     type: 0
-    floatValue: 1
+    floatValue: 0
     vector2Value: {x: 0, y: 0}
     vector3Value: {x: 0, y: 0, z: 0}
     vector4Value: {x: 0, y: 0, z: 0, w: 0}
