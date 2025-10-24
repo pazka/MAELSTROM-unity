@@ -44,7 +44,7 @@ namespace Maelstrom.Unity
         /// <summary>
         /// Initialize the display object from a data point (handles all behavior mapping internally)
         /// </summary>
-        public void InitializeFromDataPoint(GhostNetDataPoint dataPoint, Vector2 screenSize, float normalizedCreationTime, float currentMaelstrom)
+        public void InitializeFromDataPoint(GhostNetDataPoint dataPoint, Vector2 screenSize, float normalizedCreationTime, float currentMaelstrom, Vector2 centerPos)
         {
             Reset();
 
@@ -53,8 +53,8 @@ namespace Maelstrom.Unity
             this.createdGameTime = Time.time;
             this.random = UnityEngine.Random.Range(0, 1000) / 1000f;
 
-            // Set center position (center of screen)
-            centerPosition = new Vector2(0f,200f);
+            // Set center position from parameter
+            centerPosition = centerPos;
 
             // Initialize circular motion parameters - each object gets its own random motion
             // Random angle for circular motion

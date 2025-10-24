@@ -20,6 +20,7 @@ namespace Maelstrom.Unity
         private bool _isInitialized = false;
 
         private Vector2 screenSize;
+        private Vector2 centerPosition = new Vector2(0f, 70f); // Default center position
         /// <summary>
         /// Initialize the display object pool
         /// </summary>
@@ -52,6 +53,15 @@ namespace Maelstrom.Unity
 
             _isInitialized = true;
             Debug.Log($"DisplayObjectPool initialized with {_inactiveObjects.Count} objects");
+        }
+
+        /// <summary>
+        /// Set the center position for display objects
+        /// </summary>
+        public void SetCenterPosition(Vector2 centerPos)
+        {
+            centerPosition = centerPos;
+            Debug.Log($"Center position set to: {centerPosition}");
         }
 
         /// <summary>
@@ -178,7 +188,7 @@ namespace Maelstrom.Unity
             }
 
             // Let the display object handle its own initialization based on data point
-            displayObject.InitializeFromDataPoint(dataPoint, screenSize, normalizedCreationtime, currentMaelstrom);
+            displayObject.InitializeFromDataPoint(dataPoint, screenSize, normalizedCreationtime, currentMaelstrom, centerPosition);
             displayObject.SetEnabled(true);
             _activeObjects.Add(displayObject);
         }
@@ -224,7 +234,7 @@ namespace Maelstrom.Unity
             
             if (recycledCount > 0)
             {
-                Debug.Log($"Recycled {recycledCount} old objects. Active: {_activeObjects.Count}, Inactive: {_inactiveObjects.Count}");
+//                Debug.Log($"Recycled {recycledCount} old objects. Active: {_activeObjects.Count}, Inactive: {_inactiveObjects.Count}");
             }
         }
 

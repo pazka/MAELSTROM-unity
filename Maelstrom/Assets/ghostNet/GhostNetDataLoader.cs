@@ -130,32 +130,8 @@ namespace Maelstrom.Unity
                     throw new System.Exception("Data is not in chronological order");
                 }
 
-                // Handle "Others" data efficiently with sampling
-                if (screenName == "##OTHERS##")
-                {
-                    // For "Others" data, create a representative sample instead of individual objects
-                    int sampleSize = Mathf.Min(nbAccountsOthers, 1000); // Limit to 100 representative objects max
-                    float tweetsPerAccount = (float)nbTweets / nbAccountsOthers;
-                    float followersPerAccount = (float)followersCount / nbAccountsOthers;
-                    
-                    for (int otherIndex = 0; otherIndex < sampleSize; otherIndex++)
-                    {
-                        dataList.Add(new GhostNetDataPoint
-                        {
-                            date = date,
-                            screen_name = screenName,
-                            nb_tweets = Mathf.RoundToInt(tweetsPerAccount),
-                            followers_count = Mathf.RoundToInt(followersPerAccount),
-                            nb_accounts_others = 1,
-                            isAggregated = true
-                        });
-                    }
-                }
-                else
-                {
-                    // For regular accounts, add as-is
-                    dataList.Add(dataPoint);
-                }
+                // For regular accounts, add as-is
+                dataList.Add(dataPoint);
             }
 
             _data = dataList.ToArray();
@@ -227,6 +203,11 @@ namespace Maelstrom.Unity
                 // Normalize all data points for this day
                 for (int j = dayStartIndex; j < dayEndIndex; j++)
                 {
+                    if(_data[j].screen_name == "##OTHERS##")
+                    {
+                        continue;
+                    }
+                    
                     //normalization for the day
                     _data[j].daynormalizedNbTweets = maxDayTweets > 0 ?
                         (float)(_data[j].nb_tweets - minDayTweets) / (maxDayTweets - minDayTweets) : 0;

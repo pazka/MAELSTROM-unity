@@ -16,6 +16,7 @@ namespace Maelstrom.Unity
 
         [SerializeField] private GhostNetDisplayObjectPool displayObjectPool;
         [SerializeField] private Config Config;
+        [SerializeField] private ParticleSystem particles;
 
         [Header("Data Settings")]
         [SerializeField] private GhostNetDataLoader dataLoader;
@@ -157,6 +158,14 @@ namespace Maelstrom.Unity
                 {
                     Debug.Log($"LOOP DETECTED: Clearing {displayObjectPool.GetActiveObjectCount()} active objects and resetting data index");
                     displayObjectPool.ClearAllActiveObjects();
+                    
+                    // Clear particle system when looping
+                    if (particles != null)
+                    {
+                        particles.Stop();
+                        particles.Clear();
+                    }
+                    
                     _dataIndex = 0;
                 }
 
@@ -164,6 +173,12 @@ namespace Maelstrom.Unity
                 _currentDay = targetDay;
                 _currentDayDataIndex = 0;
                 _dayProgress = 0f;
+                
+                // Clear particle system when changing days
+                if (particles != null)
+                {
+                    particles.Stop();
+                }
             }
 
             // Calculate progress through the current day (0 to 1)
@@ -258,7 +273,19 @@ namespace Maelstrom.Unity
                    _objectsSpawnedThisSecond < maxObjectsPerSecond)
             {
                 GhostNetDataPoint dataPoint = _currentDayData[_currentDayDataIndex];
-                displayObjectPool.ActivateDataPoint(dataPoint, normalizedCurrentTime, currentMaelstrom);
+                
+                // Handle ##OTHERS## datapoints with particle system
+                if (dataPoint.screen_name == "##OTHERS##")
+                {
+                    GhostNetParticleManager.ConfigureParticleSystem(particles, dataPoint.nb_accounts_others, currentMaelstrom);
+                    particles.Play();
+                }
+                else
+                {
+                    // Regular datapoints use display objects
+                    displayObjectPool.ActivateDataPoint(dataPoint, normalizedCurrentTime, currentMaelstrom);
+                }
+                
                 _currentDisplayedDate = dataPoint.date;
                 _currentDayDataIndex++;
                 _objectsSpawnedThisFrame++;
