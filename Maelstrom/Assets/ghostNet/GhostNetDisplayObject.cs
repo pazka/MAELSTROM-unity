@@ -16,7 +16,7 @@ namespace Maelstrom.Unity
 
         // Circular motion properties
         private float currentAngle;
-        private float targetRadius;
+        private Vector2 targetRadius;
         private float angularVelocity;
         private Vector2 centerPosition;
         private bool isMovingOutward = true;
@@ -43,7 +43,7 @@ namespace Maelstrom.Unity
         /// <summary>
         /// Initialize the display object from a data point (handles all behavior mapping internally)
         /// </summary>
-        public void InitializeFromDataPoint(GhostNetDataPoint dataPoint, Vector2 screenSize, float normalizedCreationTime)
+        public void InitializeFromDataPoint(GhostNetDataPoint dataPoint, Vector2 screenSize, float normalizedCreationTime, float currentMaelstrom)
         {
             Reset();
 
@@ -69,10 +69,16 @@ namespace Maelstrom.Unity
             );
             gameObject.transform.position = startPosition;
 
-            // Target radius: min 50, max 500 (independent of maelstrom)
-            float minRadius = 50f;
-            float maxRadius = 500f;
-            targetRadius = UnityEngine.Random.Range(minRadius, maxRadius);
+            // Target radius: min 300, max 550, influenced by current maelstrom
+            float minRadius = 300f;
+            float maxRadius = 550f;
+            
+            // Adjust radius range based on maelstrom (higher maelstrom = larger radius range)
+            float maelstromInfluence = 1f + (currentMaelstrom * 0.5f); // 0.5 to 1.5 multiplier
+            float adjustedMinRadius = minRadius * maelstromInfluence;
+            float adjustedMaxRadius = maxRadius * maelstromInfluence;
+            
+            targetRadius = new Vector2(UnityEngine.Random.Range(adjustedMinRadius, adjustedMaxRadius),UnityEngine.Random.Range(adjustedMinRadius, adjustedMaxRadius));
 
             // Angular velocity: 30 degrees * velocity in 3 seconds
             // Convert to radians per second with random direction
@@ -88,7 +94,7 @@ namespace Maelstrom.Unity
             isMovingOutward = true;
 
             // Size based on followers count
-            var oneAccountSize = 10 * random + 10 + dataPoint.normalizedFollowersCount * 50;
+            var oneAccountSize = 5 * random + 5 + dataPoint.normalizedFollowersCount * 15;
             var size = dataPoint.isAggregated ? 2 : oneAccountSize;
             gameObject.transform.localScale = new Vector3(size, size, 0);
         }
@@ -108,8 +114,8 @@ namespace Maelstrom.Unity
             // Update circular motion with amplified velocity and randomness
             currentAngle += (amplifiedAngularVelocity + sinVariation) * deltaTime;
 
-            // Calculate current radius (moving outward from center)
-            float currentRadius = 0f;
+            // Calculate current radius (moving outward from center) - now elliptical
+            Vector2 currentRadius = Vector2.zero;
             if (isMovingOutward)
             {
                 // Move outward over time (reach target radius in 3 seconds)
@@ -117,9 +123,9 @@ namespace Maelstrom.Unity
 
                 // Add cosine variation to radius for organic pulsing
                 float radiusVariation = Mathf.Cos(timeVariation * 1.2f + random * Mathf.PI) * 20f;
-                float targetRadiusWithVariation = targetRadius + radiusVariation + (maelstrom * 200);
+                Vector2 targetRadiusWithVariation = targetRadius + new Vector2(radiusVariation, radiusVariation) + new Vector2(maelstrom * 200, maelstrom * 200);
 
-                currentRadius = Mathf.Lerp(10f, targetRadiusWithVariation, progress);
+                currentRadius = Vector2.Lerp(new Vector2(10f, 10f), targetRadiusWithVariation, progress);
 
                 // Stop moving outward when target is reached
                 if (progress >= 1f)
@@ -131,14 +137,14 @@ namespace Maelstrom.Unity
             {
                 // Continue with radius variation even after reaching target
                 float radiusVariation = Mathf.Cos(timeVariation * 1.2f + random * Mathf.PI) * 20f;
-                currentRadius = targetRadius + radiusVariation + (maelstrom * 200);
+                currentRadius = targetRadius + new Vector2(radiusVariation, radiusVariation) + new Vector2(maelstrom * 200, maelstrom * 200);
             }
 
-            // Calculate position based on circular motion with additional randomness
+            // Calculate position based on elliptical motion with additional randomness
             float finalAngle = currentAngle + cosVariation; // Add cosine variation to angle
             Vector2 circularPosition = centerPosition + new Vector2(
-                Mathf.Cos(finalAngle) * currentRadius,
-                Mathf.Sin(finalAngle) * currentRadius
+                Mathf.Cos(finalAngle) * currentRadius.x,
+                Mathf.Sin(finalAngle) * currentRadius.y
             );
 
             gameObject.transform.position = circularPosition;
@@ -153,7 +159,7 @@ namespace Maelstrom.Unity
 
             // Reset circular motion properties
             currentAngle = 0f;
-            targetRadius = 0f;
+            targetRadius = Vector2.zero;
             angularVelocity = 0f;
             centerPosition = Vector2.zero;
             isMovingOutward = true;

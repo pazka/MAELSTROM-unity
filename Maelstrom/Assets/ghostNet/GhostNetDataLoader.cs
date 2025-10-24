@@ -130,18 +130,31 @@ namespace Maelstrom.Unity
                     throw new System.Exception("Data is not in chronological order");
                 }
 
-                //spread others here
-                for (int otherIndex = 0; otherIndex < nbAccountsOthers; otherIndex++)
+                // Handle "Others" data efficiently with sampling
+                if (screenName == "##OTHERS##")
                 {
-                    dataList.Add(new GhostNetDataPoint
+                    // For "Others" data, create a representative sample instead of individual objects
+                    int sampleSize = Mathf.Min(nbAccountsOthers, 1000); // Limit to 100 representative objects max
+                    float tweetsPerAccount = (float)nbTweets / nbAccountsOthers;
+                    float followersPerAccount = (float)followersCount / nbAccountsOthers;
+                    
+                    for (int otherIndex = 0; otherIndex < sampleSize; otherIndex++)
                     {
-                        date = date,
-                        screen_name = screenName,
-                        nb_tweets = nbTweets,
-                        followers_count = followersCount,
-                        nb_accounts_others = 1,
-                        isAggregated = screenName == "##OTHERS##"
-                    });
+                        dataList.Add(new GhostNetDataPoint
+                        {
+                            date = date,
+                            screen_name = screenName,
+                            nb_tweets = Mathf.RoundToInt(tweetsPerAccount),
+                            followers_count = Mathf.RoundToInt(followersPerAccount),
+                            nb_accounts_others = 1,
+                            isAggregated = true
+                        });
+                    }
+                }
+                else
+                {
+                    // For regular accounts, add as-is
+                    dataList.Add(dataPoint);
                 }
             }
 
@@ -157,9 +170,31 @@ namespace Maelstrom.Unity
 
         private void NormalizeData()
         {
+            // Detect and cap outliers in followers count to prevent normalization skewing
+            float cappedMaxFollowers = _dataBounds.Max.followers_count;
+            float outlierThreshold = _dataBounds.Max.followers_count * 0.1f; // 10% of max
+            
+            // Find the second highest followers count to use as cap if max is an outlier
+            float secondHighestFollowers = 0f;
+            foreach (var dataPoint in _data)
+            {
+                if (dataPoint.followers_count > secondHighestFollowers && 
+                    dataPoint.followers_count < _dataBounds.Max.followers_count)
+                {
+                    secondHighestFollowers = dataPoint.followers_count;
+                }
+            }
+            
+            // If the max is significantly larger than the second highest, cap it
+            if (secondHighestFollowers > 0 && _dataBounds.Max.followers_count > secondHighestFollowers * 10f)
+            {
+                cappedMaxFollowers = secondHighestFollowers;
+                Debug.Log($"Capped followers normalization: Original max {_dataBounds.Max.followers_count:N0} -> Capped max {cappedMaxFollowers:N0} (outlier detected)");
+            }
+
             // Pre-calculate global ranges for efficiency
             float tweetsRange = _dataBounds.Max.nb_tweets - _dataBounds.Min.nb_tweets;
-            float followersRange = _dataBounds.Max.followers_count - _dataBounds.Min.followers_count;
+            float followersRange = cappedMaxFollowers - _dataBounds.Min.followers_count;
             float dateRange = _dataBounds.Max.date.Ticks - _dataBounds.Min.date.Ticks;
 
             // Process data in chronological order, grouping by date
@@ -203,12 +238,18 @@ namespace Maelstrom.Unity
                         (float)(_data[j].nb_tweets - _dataBounds.Min.nb_tweets) / tweetsRange : 0;
                     _data[j].normalizedFollowersCount = followersRange > 0 ?
                         (float)(_data[j].followers_count - _dataBounds.Min.followers_count) / followersRange : 0;
+                    
+                    // Clamp normalized followers count to prevent values > 1.0 when using capped max
+                    if (_data[j].normalizedFollowersCount > 1.0f)
+                    {
+                        _data[j].normalizedFollowersCount = 1.0f;
+                    }
 
                     _data[j].normalizedDate = (float)((_data[j].date.Ticks - _dataBounds.Min.date.Ticks) / dateRange);
                 }
             }
 
-            Debug.Log("Data normalized with sentiment values (optimized)");
+            Debug.Log($"Data normalized with outlier capping (optimized) - Followers range: {_dataBounds.Min.followers_count:N0} to {cappedMaxFollowers:N0}");
         }
 
         /// <summary>

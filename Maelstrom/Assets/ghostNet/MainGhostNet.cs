@@ -40,6 +40,14 @@ namespace Maelstrom.Unity
         private List<GhostNetDataPoint> _currentDayData = new List<GhostNetDataPoint>();
         private int _currentDayDataIndex = 0;
         private float _dayProgress = 0f; // 0 to 1, progress through current day
+        
+        // Frame rate limiting for spawning
+        [Header("Performance Settings")]
+        [SerializeField] private int maxObjectsPerFrame = 50; // Limit objects spawned per frame
+        [SerializeField] private int maxObjectsPerSecond = 1000; // Limit objects spawned per second
+        private int _objectsSpawnedThisFrame = 0;
+        private int _objectsSpawnedThisSecond = 0;
+        private float _lastSecondReset = 0f;
 
         [SerializeField] private PureDataConnector pureDataConnector;
         // Timing
@@ -80,6 +88,16 @@ namespace Maelstrom.Unity
             if (!dataLoader.IsDataLoaded) return;
 
             _currentTime += Time.deltaTime;
+            
+            // Reset frame counters
+            _objectsSpawnedThisFrame = 0;
+            
+            // Reset per-second counter
+            if (_currentTime - _lastSecondReset >= 1.0f)
+            {
+                _objectsSpawnedThisSecond = 0;
+                _lastSecondReset = _currentTime;
+            }
 
             // Process data and manage display objects
             ProcessDataAndManageObjects();
@@ -230,16 +248,37 @@ namespace Maelstrom.Unity
             int totalPointsForDay = _currentDayData.Count;
             int targetSpawnedCount = Mathf.RoundToInt(_dayProgress * totalPointsForDay);
 
-            // Spawn data points up to the target count
-            while (_currentDayDataIndex < targetSpawnedCount && _currentDayDataIndex < _currentDayData.Count)
+            // Get current maelstrom for radius calculation
+            float currentMaelstrom = maelstrom.GetCurrentMaelstrom();
+            
+            // Spawn data points up to the target count with frame rate limiting
+            while (_currentDayDataIndex < targetSpawnedCount && 
+                   _currentDayDataIndex < _currentDayData.Count &&
+                   _objectsSpawnedThisFrame < maxObjectsPerFrame &&
+                   _objectsSpawnedThisSecond < maxObjectsPerSecond)
             {
                 GhostNetDataPoint dataPoint = _currentDayData[_currentDayDataIndex];
-                displayObjectPool.ActivateDataPoint(dataPoint, normalizedCurrentTime);
+                displayObjectPool.ActivateDataPoint(dataPoint, normalizedCurrentTime, currentMaelstrom);
                 _currentDisplayedDate = dataPoint.date;
                 _currentDayDataIndex++;
+                _objectsSpawnedThisFrame++;
+                _objectsSpawnedThisSecond++;
 
                 // Update global data index to track overall progress
                 _dataIndex = Mathf.Max(_dataIndex, GetDataIndexForDate(dataPoint.date));
+            }
+            
+            // Log warnings if we hit performance limits
+            if (_objectsSpawnedThisFrame >= maxObjectsPerFrame)
+            {
+                Debug.LogWarning($"Performance: Hit frame limit ({maxObjectsPerFrame} objects/frame). " +
+                               $"Remaining data points: {targetSpawnedCount - _currentDayDataIndex}");
+            }
+            
+            if (_objectsSpawnedThisSecond >= maxObjectsPerSecond)
+            {
+                Debug.LogWarning($"Performance: Hit second limit ({maxObjectsPerSecond} objects/second). " +
+                               $"Remaining data points: {targetSpawnedCount - _currentDayDataIndex}");
             }
         }
 
@@ -268,6 +307,10 @@ namespace Maelstrom.Unity
             Debug.Log($"Recycling Stats - Active: {displayObjectPool.GetActiveObjectCount()}, " +
                      $"Inactive Queue: {displayObjectPool.GetInactiveObjectCount()}, " +
                      $"Pool Size: {displayObjectPool.GetPoolSize()}");
+
+            // Log performance metrics
+            Debug.Log($"Performance - Objects/Frame: {_objectsSpawnedThisFrame}/{maxObjectsPerFrame}, " +
+                     $"Objects/Second: {_objectsSpawnedThisSecond}/{maxObjectsPerSecond}");
 
             // Log current day data progression
             if (_currentDayData.Count > 0)

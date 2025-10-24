@@ -10,9 +10,9 @@ namespace Maelstrom.Unity
     public class GhostNetDisplayObjectPool : MonoBehaviour
     {
         [Header("Pool Settings")]
-        [SerializeField] private int initialPoolSize = 50000;
-        [SerializeField] private int maxActiveObjects = 100000;
-        [SerializeField] private int maxPoolSize = 100000; // Maximum total pool size to prevent unlimited growth
+        [SerializeField] private int initialPoolSize = 5000; // Reduced from 50000
+        [SerializeField] private int maxActiveObjects = 10000; // Reduced from 100000
+        [SerializeField] private int maxPoolSize = 15000; // Reduced from 100000
         [SerializeField] private GhostNetPointPool ghostNetPointPool; // Reference to the point pool for creating new objects
 
         private Queue<GhostNetDisplayObject> _activeObjects = new Queue<GhostNetDisplayObject>();
@@ -147,7 +147,7 @@ namespace Maelstrom.Unity
         /// <summary>
         /// Activate display objects for a data point (handles the full activation logic)
         /// </summary>
-        public void ActivateDataPoint(GhostNetDataPoint dataPoint, float normalizedCreationtime)
+        public void ActivateDataPoint(GhostNetDataPoint dataPoint, float normalizedCreationtime, float currentMaelstrom)
         {
             if (!_isInitialized)
             {
@@ -178,7 +178,7 @@ namespace Maelstrom.Unity
             }
 
             // Let the display object handle its own initialization based on data point
-            displayObject.InitializeFromDataPoint(dataPoint, screenSize, normalizedCreationtime);
+            displayObject.InitializeFromDataPoint(dataPoint, screenSize, normalizedCreationtime, currentMaelstrom);
             displayObject.SetEnabled(true);
             _activeObjects.Enqueue(displayObject);
         }

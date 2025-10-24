@@ -11,8 +11,8 @@ namespace Maelstrom.Unity
     {
         [Header("Pool Settings")]
         [SerializeField] private GameObject ghostNetPrefab;
-        [SerializeField] private int initialPoolSize = 10000;
-        [SerializeField] private int maxPoolSize = 100000;
+        [SerializeField] private int initialPoolSize = 2000; // Reduced from 10000
+        [SerializeField] private int maxPoolSize = 5000; // Reduced from 100000
 
         private Queue<GameObject> _availableObjects = new Queue<GameObject>();
         private Transform _poolParent;
