@@ -51,7 +51,7 @@ namespace Maelstrom.Unity
 
             // Initialize UDP service for feed role
 
-            loopDuration = config.Get("loopDuration", 600);
+            loopDuration = config.Get("loopDuration", 1200);
 
             if (dataLoader == null)
             {

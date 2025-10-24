@@ -78,7 +78,7 @@ namespace Maelstrom.Unity
                 Debug.Log("Waiting for ghostNet data to load...");
             }
 
-            loopDuration = Config.Get<int>("loopDuration", 600);
+            loopDuration = Config.Get<int>("loopDuration", 1200);
             // Initialize UDP service for ghostNet role
             CommonMaelstrom.InitializeUdpService(2, pureDataConnector); // 2 = ghostNet
         }

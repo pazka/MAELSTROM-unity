@@ -15,7 +15,7 @@ namespace Maelstrom.Unity
         [SerializeField] private int maxPoolSize = 15000; // Reduced from 100000
         [SerializeField] private GhostNetPointPool ghostNetPointPool; // Reference to the point pool for creating new objects
 
-        private Queue<GhostNetDisplayObject> _activeObjects = new Queue<GhostNetDisplayObject>();
+        private List<GhostNetDisplayObject> _activeObjects = new List<GhostNetDisplayObject>();
         private Queue<GhostNetDisplayObject> _inactiveObjects = new Queue<GhostNetDisplayObject>();
         private bool _isInitialized = false;
 
@@ -180,7 +180,7 @@ namespace Maelstrom.Unity
             // Let the display object handle its own initialization based on data point
             displayObject.InitializeFromDataPoint(dataPoint, screenSize, normalizedCreationtime, currentMaelstrom);
             displayObject.SetEnabled(true);
-            _activeObjects.Enqueue(displayObject);
+            _activeObjects.Add(displayObject);
         }
 
         /// <summary>
@@ -202,24 +202,29 @@ namespace Maelstrom.Unity
         /// </summary>
         public void RecycleOldObjects(float normalizedCurrentTime, float normalizedDisplayDuration)
         {
-            while (_activeObjects.Count > 0)
+            int recycledCount = 0;
+            
+            // Iterate backwards through the list to safely remove items
+            for (int i = _activeObjects.Count - 1; i >= 0; i--)
             {
-                GhostNetDisplayObject obj = _activeObjects.Peek();
+                GhostNetDisplayObject obj = _activeObjects[i];
+                if (obj == null) continue;
+                
                 float objectAge = normalizedCurrentTime - obj.normalizedCreationTime;
 
                 // Handle loop transitions - if object age is negative or very large, 
                 // it means we've looped and this object is from a previous loop
                 if (objectAge < 0 || objectAge > 1.0f || objectAge >= normalizedDisplayDuration)
                 {
-                    _activeObjects.Dequeue();
+                    _activeObjects.RemoveAt(i);
                     RecycleDisplayObject(obj);
+                    recycledCount++;
                 }
-                else
-                {
-                    // Since data is ordered, if this object is not old enough, 
-                    // none of the remaining objects will be either
-                    break;
-                }
+            }
+            
+            if (recycledCount > 0)
+            {
+                Debug.Log($"Recycled {recycledCount} old objects. Active: {_activeObjects.Count}, Inactive: {_inactiveObjects.Count}");
             }
         }
 
@@ -240,7 +245,7 @@ namespace Maelstrom.Unity
         /// <summary>
         /// Get all active objects for external iteration
         /// </summary>
-        public Queue<GhostNetDisplayObject> GetActiveObjects()
+        public List<GhostNetDisplayObject> GetActiveObjects()
         {
             return _activeObjects;
         }
@@ -275,14 +280,15 @@ namespace Maelstrom.Unity
         public void ClearPool()
         {
             // Clean up all active objects
-            while (_activeObjects.Count > 0)
+            for (int i = _activeObjects.Count - 1; i >= 0; i--)
             {
-                GhostNetDisplayObject obj = _activeObjects.Dequeue();
+                GhostNetDisplayObject obj = _activeObjects[i];
                 if (obj != null)
                 {
                     obj.SetEnabled(false);
                 }
             }
+            _activeObjects.Clear();
 
             // Clean up inactive objects
             while (_inactiveObjects.Count > 0)
@@ -305,15 +311,16 @@ namespace Maelstrom.Unity
         /// </summary>
         public void ClearAllActiveObjects()
         {
-            while (_activeObjects.Count > 0)
+            for (int i = _activeObjects.Count - 1; i >= 0; i--)
             {
-                GhostNetDisplayObject obj = _activeObjects.Dequeue();
+                GhostNetDisplayObject obj = _activeObjects[i];
                 if (obj != null)
                 {
                     obj.SetEnabled(false);
                     _inactiveObjects.Enqueue(obj);
                 }
             }
+            _activeObjects.Clear();
             Debug.Log($"Cleared all active objects. Active: {_activeObjects.Count}, Inactive: {_inactiveObjects.Count}");
         }
 

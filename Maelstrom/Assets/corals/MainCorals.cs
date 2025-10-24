@@ -37,7 +37,7 @@ namespace Maelstrom.Unity
             positive.SetActive(true);
             negative.SetActive(true);
             neutral.SetActive(true);
-            loopDuration = config.Get("loopDuration", 600);
+            loopDuration = config.Get("loopDuration", 1200);
             if (dataLoader == null)
             {
                 throw new System.Exception("CoralDataLoader not found! Please assign a CoralDataLoader component.");

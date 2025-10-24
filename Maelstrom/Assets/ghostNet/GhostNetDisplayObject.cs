@@ -20,6 +20,7 @@ namespace Maelstrom.Unity
         private float angularVelocity;
         private Vector2 centerPosition;
         private bool isMovingOutward = true;
+        private float ellipseRotationAngle; // Random angle for elliptical rotation
 
         public float normalizedCreationTime = 0.0f;
         public float createdGameTime = 0.0f;
@@ -53,11 +54,14 @@ namespace Maelstrom.Unity
             this.random = UnityEngine.Random.Range(0, 1000) / 1000f;
 
             // Set center position (center of screen)
-            centerPosition = Vector2.zero;
+            centerPosition = new Vector2(0f,200f);
 
             // Initialize circular motion parameters - each object gets its own random motion
             // Random angle for circular motion
             currentAngle = UnityEngine.Random.Range(0f, 360f) * Mathf.Deg2Rad;
+            
+            // Random rotation angle for elliptical motion (0 to 180 degrees)
+            ellipseRotationAngle = UnityEngine.Random.Range(0f, 180f) * Mathf.Deg2Rad;
 
             // Random starting radius (small circle around center)
             float startRadius = UnityEngine.Random.Range(10f, 30f);
@@ -70,15 +74,12 @@ namespace Maelstrom.Unity
             gameObject.transform.position = startPosition;
 
             // Target radius: min 300, max 550, influenced by current maelstrom
-            float minRadius = 300f;
-            float maxRadius = 550f;
+            float minRadius = 50f;
+            float maxRadius = 1000f;
             
-            // Adjust radius range based on maelstrom (higher maelstrom = larger radius range)
-            float maelstromInfluence = 1f + (currentMaelstrom * 0.5f); // 0.5 to 1.5 multiplier
-            float adjustedMinRadius = minRadius * maelstromInfluence;
-            float adjustedMaxRadius = maxRadius * maelstromInfluence;
+            float adjustedMaxRadius =  maxRadius * (0.5f + currentMaelstrom/2f);
             
-            targetRadius = new Vector2(UnityEngine.Random.Range(adjustedMinRadius, adjustedMaxRadius),UnityEngine.Random.Range(adjustedMinRadius, adjustedMaxRadius));
+            targetRadius = new Vector2(UnityEngine.Random.Range(minRadius, adjustedMaxRadius),UnityEngine.Random.Range(minRadius, adjustedMaxRadius));
 
             // Angular velocity: 30 degrees * velocity in 3 seconds
             // Convert to radians per second with random direction
@@ -140,12 +141,25 @@ namespace Maelstrom.Unity
                 currentRadius = targetRadius + new Vector2(radiusVariation, radiusVariation) + new Vector2(maelstrom * 200, maelstrom * 200);
             }
 
-            // Calculate position based on elliptical motion with additional randomness
+            // Calculate position based on rotated elliptical motion with additional randomness
             float finalAngle = currentAngle + cosVariation; // Add cosine variation to angle
-            Vector2 circularPosition = centerPosition + new Vector2(
+            
+            // Calculate elliptical position in local coordinates
+            Vector2 localEllipticalPosition = new Vector2(
                 Mathf.Cos(finalAngle) * currentRadius.x,
                 Mathf.Sin(finalAngle) * currentRadius.y
             );
+            
+            // Rotate the elliptical position by the ellipse rotation angle
+            float cosRot = Mathf.Cos(ellipseRotationAngle);
+            float sinRot = Mathf.Sin(ellipseRotationAngle);
+            Vector2 rotatedPosition = new Vector2(
+                localEllipticalPosition.x * cosRot - localEllipticalPosition.y * sinRot,
+                localEllipticalPosition.x * sinRot + localEllipticalPosition.y * cosRot
+            );
+            
+            // Apply to world position
+            Vector2 circularPosition = centerPosition + rotatedPosition;
 
             gameObject.transform.position = circularPosition;
             material.SetColor("_Color", new Color(1 - maelstrom, 1 - maelstrom, 1));
@@ -163,6 +177,7 @@ namespace Maelstrom.Unity
             angularVelocity = 0f;
             centerPosition = Vector2.zero;
             isMovingOutward = true;
+            ellipseRotationAngle = 0f;
         }
 
 
