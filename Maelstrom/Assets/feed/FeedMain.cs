@@ -17,7 +17,7 @@ namespace Maelstrom.Unity
 
         [Header("Data Settings")]
         [SerializeField] private FeedDataLoader dataLoader;
-
+        [SerializeField] private GameObject positiveCaustics;
         [SerializeField] private Config config;
 
         [Header("Debug")]
@@ -128,6 +128,7 @@ namespace Maelstrom.Unity
 
         private void ActivateObjectsForNewData(float normalizedCurrentTime)
         {
+            var maelstromValue = maelstrom.GetCurrentMaelstrom();
             // Activate objects for new data points
             while (_currentDataIndex < _data.Length && displayObjectPool.GetActiveObjectCount() < displayObjectPool.MaxActiveObjects)
             {
@@ -139,7 +140,7 @@ namespace Maelstrom.Unity
                     // Register data with maelstrom manager for daily retweet counting
                     maelstrom.RegisterData(dataPoint);
 
-                    displayObjectPool.ActivateDataPoint(dataPoint, normalizedCurrentTime,maelstrom.GetCurrentMaelstrom());
+                    displayObjectPool.ActivateDataPoint(dataPoint, normalizedCurrentTime,maelstromValue );
                     _currentDisplayedDate = dataPoint.date;
                     _currentDataIndex++;
                 }
@@ -149,6 +150,7 @@ namespace Maelstrom.Unity
                     break;
                 }
             }
+            positiveCaustics.GetComponent<Renderer>().material.SetFloat("_Maelstrom", maelstromValue);
 
             // If we've reached the end of data, loop back to start
             if (_currentDataIndex >= _data.Length)

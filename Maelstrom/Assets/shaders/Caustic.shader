@@ -103,8 +103,28 @@ Shader "Custom/Caustic"
                 return OUT;
             }
 
+            float getBorder(float2 uv){
+                float borderSize = 0.05;
+                float borderAlpha = 1;
+
+                if(uv.x < borderSize){
+                    borderAlpha = borderAlpha - (borderSize - uv.x )/borderSize;
+                }else if ((1-uv.x ) < borderSize){
+                    borderAlpha = borderAlpha - (borderSize - (1-uv.x ))/borderSize;
+                }
+
+                if(uv.y < borderSize){
+                    borderAlpha = borderAlpha - (borderSize - uv.y )/borderSize;
+                }else if ((1-uv.y ) < borderSize){
+                    borderAlpha = borderAlpha - (borderSize - (1-uv.y ))/borderSize;
+                }
+
+                return borderAlpha;
+            }
+
             half4 frag(Varyings IN) : SV_Target
             {
+
                 float2 uv = IN.uv;
                 float amplitude = pow(_Seed*2,2);
 
@@ -129,9 +149,12 @@ Shader "Custom/Caustic"
                 float3 backgroundColor = float3(0.0, 0.0, _Maelstrom);
 
                 float alpha = _Opacity * (col.x+col.y+col.z)/3;
+
+                float borderGradient = getBorder(uv);
+                
                 col += (1.0 - v) * backgroundColor;
 
-                return float4(col, alpha);
+                return float4(col * borderGradient, alpha * borderGradient);
             }
 
             ENDHLSL

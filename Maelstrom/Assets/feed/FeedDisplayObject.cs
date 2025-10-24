@@ -19,8 +19,8 @@ namespace Maelstrom.Unity
         public float createdGameTime = 0.0f;
 
         // Dual circle system
-        private Vector2 circleCenter = new Vector2(0, 500); // Center of first circle (1920x1080)
-        private float circleRadius = 1080; // Radius of each circle
+        private Vector2 circleCenter = new Vector2(0, 540); // Center of first circle (1920x1080)
+        private float circleRadius = 950; // Radius of each circle
 
         public bool IsEnabled => isEnabled;
         public FeedDataPoint DataPoint => dataPoint;
@@ -84,14 +84,12 @@ namespace Maelstrom.Unity
 
                 if (distanceFromCenter > circleRadius)
                 {
-                    // Object has crossed circle boundary - wrap to opposite circle maintaining path
-                    WrapToOppositeCircle(newPosition, circleCenter);
+                    velocity = -velocity;
+                    newPosition = currentPosition + new Vector3(velocity.x, velocity.y, 0) * deltaTime * 5f * maelstrom;
                 }
-                else
-                {
-                    // Normal movement within circle
-                    gameObject.transform.position = newPosition;
-                }
+
+                // Normal movement within circle
+                gameObject.transform.position = newPosition;
 
                 material.SetColor("_Color", new Color(1 - maelstrom, 1 - maelstrom, 1));
             }
@@ -123,20 +121,6 @@ namespace Maelstrom.Unity
             );
         }
 
-        /// <summary>
-        /// Wrap object to opposite circle when it crosses boundary, reversing direction to continue away from old circle
-        /// </summary>
-        private void WrapToOppositeCircle(Vector3 exitPosition, Vector2 currentCenter)
-        {
-            // Calculate direction from current center to exit position
-            Vector2 directionFromCenter = new Vector2(exitPosition.x, exitPosition.y) - currentCenter;
-            directionFromCenter = directionFromCenter.normalized;
-
-            // Place object at opposite position in the other circle
-            Vector2 wrappedPosition = -directionFromCenter * circleRadius;
-
-            gameObject.transform.position = new Vector3(wrappedPosition.x, wrappedPosition.y, exitPosition.z);
-        }
 
         /// <summary>
         /// Enable or disable this display object
