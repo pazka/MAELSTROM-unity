@@ -11,8 +11,8 @@ namespace Maelstrom.Unity
 {
     public static class CommonMaelstrom
     {
-        private static float HIGH_MAELSTROM_THRESHOLD = 0.99f;
-        private static float MEDIUM_MAELSTROM_THRESHOLD = 0.94f;
+        private static float HIGH_MAELSTROM_THRESHOLD = 0.90f;
+        private static float MEDIUM_MAELSTROM_THRESHOLD = 0.80f;
 
         private static float currentMaelstrom = 0f;
         private static float targetMaelstrom = 0f;
@@ -76,7 +76,7 @@ namespace Maelstrom.Unity
 
             if ((currentMaelstrom - targetMaelstrom) < 0.002f)
             {
-                if (currentRatio > 0.3 && netRnd >= HIGH_MAELSTROM_THRESHOLD)
+                if (currentRatio > 0.2 && netRnd >= HIGH_MAELSTROM_THRESHOLD)
                 {
                     targetMaelstrom = 1;
                     Debug.Log($"BIG Mal({netRnd}) : {targetMaelstrom}/{currentMaelstrom}");
@@ -98,7 +98,7 @@ namespace Maelstrom.Unity
             currentMaelstrom = Mathf.Lerp(currentMaelstrom, targetMaelstrom, lerpSpeed);
 
             // Store current maelstrom in history (keep max 100 values)
-            maelstromHistory.Enqueue(currentMaelstrom);
+            maelstromHistory.Enqueue(targetMaelstrom);
             if (maelstromHistory.Count > 100)
             {
                 maelstromHistory.Dequeue();

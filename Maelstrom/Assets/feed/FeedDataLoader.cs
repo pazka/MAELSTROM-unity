@@ -153,15 +153,15 @@ namespace Maelstrom.Unity
                 using (StreamWriter writer = new StreamWriter(filePath))
                 {
                     // Write header
-                    writer.WriteLine("date,real_date,retweetCount,normalizedRetweetCount,normalizedDate");
+                    writer.WriteLine("date;real_date;retweetCount;normalizedRetweetCount;normalizedDate");
                     
                     // Write data
                     foreach (var dataPoint in _data)
                     {
-                        writer.WriteLine($"{dataPoint.date:yyyy-MM-dd HH:mm:ss}," +
-                                       $"{dataPoint.date:yyyy-MM-dd HH:mm:ss}," +
-                                       $"{dataPoint.retweetCount}," +
-                                       $"{dataPoint.normalizedRetweetCount:F6}," +
+                        writer.WriteLine($"{dataPoint.date:yyyy-MM-dd HH:mm:ss};" +
+                                       $"{dataPoint.date:yyyy-MM-dd HH:mm:ss};" +
+                                       $"{dataPoint.retweetCount};" +
+                                       $"{dataPoint.normalizedRetweetCount:F6};" +
                                        $"{dataPoint.normalizedDate:F6}");
                     }
                 }

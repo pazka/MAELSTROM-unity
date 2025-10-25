@@ -192,23 +192,23 @@ namespace Maelstrom.Unity
                 using (StreamWriter writer = new StreamWriter(filePath))
                 {
                     // Write header
-                    writer.WriteLine("date,real_date,pos,neu,neg,dayNormPos,dayNormNeu,dayNormNeg," +
-                                   "normalizedPos,normalizedNeu,normalizedNeg,normalizedDate");
+                    writer.WriteLine("date;real_date;pos;neu;neg;dayNormPos;dayNormNeu;dayNormNeg;" +
+                                   "normalizedPos;normalizedNeu;normalizedNeg;normalizedDate");
                     
                     // Write data
                     foreach (var dataPoint in _data)
                     {
-                        writer.WriteLine($"{dataPoint.date:yyyy-MM-dd HH:mm:ss}," +
-                                       $"{dataPoint.date:yyyy-MM-dd HH:mm:ss}," +
-                                       $"{dataPoint.pos:F6}," +
-                                       $"{dataPoint.neu:F6}," +
-                                       $"{dataPoint.neg:F6}," +
-                                       $"{dataPoint.dayNormPos:F6}," +
-                                       $"{dataPoint.dayNormNeu:F6}," +
-                                       $"{dataPoint.dayNormNeg:F6}," +
-                                       $"{dataPoint.normalizedPos:F6}," +
-                                       $"{dataPoint.normalizedNeu:F6}," +
-                                       $"{dataPoint.normalizedNeg:F6}," +
+                        writer.WriteLine($"{dataPoint.date:yyyy-MM-dd HH:mm:ss};" +
+                                       $"{dataPoint.date:yyyy-MM-dd HH:mm:ss};" +
+                                       $"{dataPoint.pos:F6};" +
+                                       $"{dataPoint.neu:F6};" +
+                                       $"{dataPoint.neg:F6};" +
+                                       $"{dataPoint.dayNormPos:F6};" +
+                                       $"{dataPoint.dayNormNeu:F6};" +
+                                       $"{dataPoint.dayNormNeg:F6};" +
+                                       $"{dataPoint.normalizedPos:F6};" +
+                                       $"{dataPoint.normalizedNeu:F6};" +
+                                       $"{dataPoint.normalizedNeg:F6};" +
                                        $"{dataPoint.normalizedDate:F6}");
                     }
                 }

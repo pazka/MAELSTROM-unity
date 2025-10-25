@@ -20,7 +20,7 @@ namespace Maelstrom.Unity
         private bool _isInitialized = false;
 
         private Vector2 screenSize;
-        private Vector2 centerPosition = new Vector2(0f, 70f); // Default center position
+        private Vector2 centerPosition = new Vector2(0f, 100f); // Default center position
         /// <summary>
         /// Initialize the display object pool
         /// </summary>
