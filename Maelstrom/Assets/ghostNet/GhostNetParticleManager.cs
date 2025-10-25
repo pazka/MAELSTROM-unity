@@ -51,8 +51,8 @@ namespace Maelstrom.Unity
             var main = particles.main;
             main.startLifetime = 10.0f; // Longer lifetime with higher maelstrom
             //main.duration = 10f;
-            main.startSpeed = 50f + currentMaelstrom * 100f; // Faster particles with higher maelstrom
-            main.startSize = 2f + currentMaelstrom * 3f; // Larger particles with higher maelstrom
+            main.startSpeed = 65f + currentMaelstrom * 100f; // Faster particles with higher maelstrom
+            main.startSize = 2f + currentMaelstrom * 5f; // Larger particles with higher maelstrom
             main.maxParticles = 10000; // Set max particles to prevent memory issues
 
             // Set color based on maelstrom (similar to display objects)

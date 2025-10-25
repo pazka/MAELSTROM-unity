@@ -121,6 +121,7 @@ namespace Maelstrom.Unity
 
             _data = dataList.ToArray();
             NormalizeData();
+            DumpNormalizedDataToCSV();
             _dataLoaded = true;
 
             Debug.Log($"Data Loaded: {_data.Length} data points");
@@ -132,28 +133,92 @@ namespace Maelstrom.Unity
 
         private void NormalizeData()
         {
+            // Pre-calculate logarithmic ranges for efficiency
+            float logMinPos = (float)Math.Log(_dataBounds.Min.pos + 1);
+            float logMaxPos = (float)Math.Log(_dataBounds.Max.pos + 1);
+            float logMinNeu = (float)Math.Log(_dataBounds.Min.neu + 1);
+            float logMaxNeu = (float)Math.Log(_dataBounds.Max.neu + 1);
+            float logMinNeg = (float)Math.Log(_dataBounds.Min.neg + 1);
+            float logMaxNeg = (float)Math.Log(_dataBounds.Max.neg + 1);
+            float dateRange = _dataBounds.Max.date.Ticks - _dataBounds.Min.date.Ticks;
+
             for (int i = 0; i < _data.Length; i++)
             {
-                // Calculate dayNormalize (relative to each other for each day)
-                float maxDayFeeling = Math.Max(_data[i].pos, Math.Max(_data[i].neu, _data[i].neg));
-                float minDayFeeling = Math.Min(_data[i].pos, Math.Min(_data[i].neu, _data[i].neg));
+                // Calculate dayNormalize (relative to each other for each day) using logarithmic scaling
+                float logPos = (float)Math.Log(_data[i].pos + 1);
+                float logNeu = (float)Math.Log(_data[i].neu + 1);
+                float logNeg = (float)Math.Log(_data[i].neg + 1);
+                
+                float maxDayFeeling = Math.Max(logPos, Math.Max(logNeu, logNeg));
+                float minDayFeeling = Math.Min(logPos, Math.Min(logNeu, logNeg));
 
-                _data[i].dayNormPos = (_data[i].pos - minDayFeeling) / (maxDayFeeling - minDayFeeling);
-                _data[i].dayNormNeu = (_data[i].neu - minDayFeeling) / (maxDayFeeling - minDayFeeling);
-                _data[i].dayNormNeg = (_data[i].neg - minDayFeeling) / (maxDayFeeling - minDayFeeling);
+                _data[i].dayNormPos = maxDayFeeling > minDayFeeling ? 
+                    (logPos - minDayFeeling) / (maxDayFeeling - minDayFeeling) : 0;
+                _data[i].dayNormNeu = maxDayFeeling > minDayFeeling ? 
+                    (logNeu - minDayFeeling) / (maxDayFeeling - minDayFeeling) : 0;
+                _data[i].dayNormNeg = maxDayFeeling > minDayFeeling ? 
+                    (logNeg - minDayFeeling) / (maxDayFeeling - minDayFeeling) : 0;
 
-                float posRange = _dataBounds.Max.pos - _dataBounds.Min.pos;
-                float neuRange = _dataBounds.Max.neu - _dataBounds.Min.neu;
-                float negRange = _dataBounds.Max.neg - _dataBounds.Min.neg;
-                float dateRange = _dataBounds.Max.date.Ticks - _dataBounds.Min.date.Ticks;
+                // Logarithmic normalization for the entire data set
+                _data[i].normalizedPos = logMaxPos > logMinPos ? 
+                    (logPos - logMinPos) / (logMaxPos - logMinPos) : 0;
+                _data[i].normalizedNeu = logMaxNeu > logMinNeu ? 
+                    (logNeu - logMinNeu) / (logMaxNeu - logMinNeu) : 0;
+                _data[i].normalizedNeg = logMaxNeg > logMinNeg ? 
+                    (logNeg - logMinNeg) / (logMaxNeg - logMinNeg) : 0;
+                
+                // Clamp normalized values to prevent values > 1.0
+                if (_data[i].normalizedPos > 1.0f) _data[i].normalizedPos = 1.0f;
+                if (_data[i].normalizedNeu > 1.0f) _data[i].normalizedNeu = 1.0f;
+                if (_data[i].normalizedNeg > 1.0f) _data[i].normalizedNeg = 1.0f;
 
-                _data[i].normalizedPos = posRange > 0 ? (_data[i].pos - _dataBounds.Min.pos) / posRange : 0;
-                _data[i].normalizedNeu = neuRange > 0 ? (_data[i].neu - _dataBounds.Min.neu) / neuRange : 0;
-                _data[i].normalizedNeg = negRange > 0 ? (_data[i].neg - _dataBounds.Min.neg) / negRange : 0;
+                // Linear normalization for time (as requested)
                 _data[i].normalizedDate = (float)((_data[i].date.Ticks - _dataBounds.Min.date.Ticks) / dateRange);
             }
 
-            Debug.Log("Data normalized");
+            Debug.Log("Data normalized with logarithmic scaling");
+        }
+
+        /// <summary>
+        /// Dump normalized data to CSV file for analysis
+        /// </summary>
+        private void DumpNormalizedDataToCSV()
+        {
+            try
+            {
+                string fileName = $"corals_normalized_data_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
+                string filePath = Path.Combine(Application.dataPath, "..", fileName);
+                
+                using (StreamWriter writer = new StreamWriter(filePath))
+                {
+                    // Write header
+                    writer.WriteLine("date,real_date,pos,neu,neg,dayNormPos,dayNormNeu,dayNormNeg," +
+                                   "normalizedPos,normalizedNeu,normalizedNeg,normalizedDate");
+                    
+                    // Write data
+                    foreach (var dataPoint in _data)
+                    {
+                        writer.WriteLine($"{dataPoint.date:yyyy-MM-dd HH:mm:ss}," +
+                                       $"{dataPoint.date:yyyy-MM-dd HH:mm:ss}," +
+                                       $"{dataPoint.pos:F6}," +
+                                       $"{dataPoint.neu:F6}," +
+                                       $"{dataPoint.neg:F6}," +
+                                       $"{dataPoint.dayNormPos:F6}," +
+                                       $"{dataPoint.dayNormNeu:F6}," +
+                                       $"{dataPoint.dayNormNeg:F6}," +
+                                       $"{dataPoint.normalizedPos:F6}," +
+                                       $"{dataPoint.normalizedNeu:F6}," +
+                                       $"{dataPoint.normalizedNeg:F6}," +
+                                       $"{dataPoint.normalizedDate:F6}");
+                    }
+                }
+                
+                Debug.Log($"Corals normalized data dumped to: {filePath}");
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"Failed to dump Corals normalized data: {ex.Message}");
+            }
         }
 
         /// <summary>

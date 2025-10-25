@@ -136,6 +136,7 @@ namespace Maelstrom.Unity
 
             _data = dataList.ToArray();
             NormalizeData();
+            DumpNormalizedDataToCSV();
             _dataLoaded = true;
 
             Debug.Log($"Data Loaded: {_data.Length} data points");
@@ -168,9 +169,11 @@ namespace Maelstrom.Unity
                 Debug.Log($"Capped followers normalization: Original max {_dataBounds.Max.followers_count:N0} -> Capped max {cappedMaxFollowers:N0} (outlier detected)");
             }
 
-            // Pre-calculate global ranges for efficiency
-            float tweetsRange = _dataBounds.Max.nb_tweets - _dataBounds.Min.nb_tweets;
-            float followersRange = cappedMaxFollowers - _dataBounds.Min.followers_count;
+            // Pre-calculate logarithmic ranges for efficiency
+            float logMinTweets = (float)Math.Log(_dataBounds.Min.nb_tweets + 1);
+            float logMaxTweets = (float)Math.Log(_dataBounds.Max.nb_tweets + 1);
+            float logMinFollowers = (float)Math.Log(_dataBounds.Min.followers_count + 1);
+            float logMaxFollowers = (float)Math.Log(cappedMaxFollowers + 1);
             float dateRange = _dataBounds.Max.date.Ticks - _dataBounds.Min.date.Ticks;
 
             // Process data in chronological order, grouping by date
@@ -187,11 +190,11 @@ namespace Maelstrom.Unity
                 }
                 int dayEndIndex = i;
 
-                // Calculate min/max teets count and follower count for this day only once
+                // Calculate min/max tweets count and follower count for this day only once
                 float maxDayTweets = 0;
-                float minDayTweets = 0;
+                float minDayTweets = float.MaxValue;
                 float maxDayFollowers = 0;
-                float minDayFollowers = 0;
+                float minDayFollowers = float.MaxValue;
                 for (int j = dayStartIndex; j < dayEndIndex; j++)
                 {
                     if (_data[j].nb_tweets > maxDayTweets) maxDayTweets = _data[j].nb_tweets;
@@ -199,6 +202,12 @@ namespace Maelstrom.Unity
                     if (_data[j].followers_count > maxDayFollowers) maxDayFollowers = _data[j].followers_count;
                     if (_data[j].followers_count < minDayFollowers) minDayFollowers = _data[j].followers_count;
                 }
+
+                // Calculate logarithmic ranges for this day
+                float logMinDayTweets = (float)Math.Log(minDayTweets + 1);
+                float logMaxDayTweets = (float)Math.Log(maxDayTweets + 1);
+                float logMinDayFollowers = (float)Math.Log(minDayFollowers + 1);
+                float logMaxDayFollowers = (float)Math.Log(maxDayFollowers + 1);
 
                 // Normalize all data points for this day
                 for (int j = dayStartIndex; j < dayEndIndex; j++)
@@ -208,29 +217,78 @@ namespace Maelstrom.Unity
                         continue;
                     }
                     
-                    //normalization for the day
-                    _data[j].daynormalizedNbTweets = maxDayTweets > 0 ?
-                        (float)(_data[j].nb_tweets - minDayTweets) / (maxDayTweets - minDayTweets) : 0;
-                    _data[j].daynormalizedFollowersCount = maxDayFollowers > 0 ?
-                        (float)(_data[j].followers_count - minDayFollowers) / (maxDayFollowers - minDayFollowers) : 0;
-
-                    //  normalization given the entire data set
-                    _data[j].normalizedNbTweets = tweetsRange > 0 ?
-                        (float)(_data[j].nb_tweets - _dataBounds.Min.nb_tweets) / tweetsRange : 0;
-                    _data[j].normalizedFollowersCount = followersRange > 0 ?
-                        (float)(_data[j].followers_count - _dataBounds.Min.followers_count) / followersRange : 0;
+                    // Logarithmic normalization for the day
+                    float logCurrentDayTweets = (float)Math.Log(_data[j].nb_tweets + 1);
+                    float logCurrentDayFollowers = (float)Math.Log(_data[j].followers_count + 1);
                     
-                    // Clamp normalized followers count to prevent values > 1.0 when using capped max
-                    if (_data[j].normalizedFollowersCount > 1.0f)
-                    {
-                        _data[j].normalizedFollowersCount = 1.0f;
-                    }
+                    _data[j].daynormalizedNbTweets = logMaxDayTweets > logMinDayTweets ?
+                        (logCurrentDayTweets - logMinDayTweets) / (logMaxDayTweets - logMinDayTweets) : 0;
+                    _data[j].daynormalizedFollowersCount = logMaxDayFollowers > logMinDayFollowers ?
+                        (logCurrentDayFollowers - logMinDayFollowers) / (logMaxDayFollowers - logMinDayFollowers) : 0;
 
+                    // Logarithmic normalization for the entire data set
+                    float logCurrentTweets = (float)Math.Log(_data[j].nb_tweets + 1);
+                    float logCurrentFollowers = (float)Math.Log(_data[j].followers_count + 1);
+                    
+                    _data[j].normalizedNbTweets = logMaxTweets > logMinTweets ?
+                        (logCurrentTweets - logMinTweets) / (logMaxTweets - logMinTweets) : 0;
+                    _data[j].normalizedFollowersCount = logMaxFollowers > logMinFollowers ?
+                        (logCurrentFollowers - logMinFollowers) / (logMaxFollowers - logMinFollowers) : 0;
+                    
+                    // Clamp normalized values to prevent values > 1.0
+                    if (_data[j].normalizedNbTweets > 1.0f)
+                        _data[j].normalizedNbTweets = 1.0f;
+                    if (_data[j].normalizedFollowersCount > 1.0f)
+                        _data[j].normalizedFollowersCount = 1.0f;
+
+                    // Linear normalization for time (as requested)
                     _data[j].normalizedDate = (float)((_data[j].date.Ticks - _dataBounds.Min.date.Ticks) / dateRange);
                 }
             }
 
-            Debug.Log($"Data normalized with outlier capping (optimized) - Followers range: {_dataBounds.Min.followers_count:N0} to {cappedMaxFollowers:N0}");
+            Debug.Log($"Data normalized with logarithmic scaling (optimized) - Followers range: {_dataBounds.Min.followers_count:N0} to {cappedMaxFollowers:N0}");
+        }
+
+        /// <summary>
+        /// Dump normalized data to CSV file for analysis
+        /// </summary>
+        private void DumpNormalizedDataToCSV()
+        {
+            try
+            {
+                string fileName = $"ghostNet_normalized_data_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
+                string filePath = Path.Combine(Application.dataPath, "..", fileName);
+                
+                using (StreamWriter writer = new StreamWriter(filePath))
+                {
+                    // Write header
+                    writer.WriteLine("date;real_date;screen_name;nb_tweets;followers_count;nb_accounts_others;isAggregated;" +
+                                   "normalizedNbTweets;normalizedFollowersCount;normalizedDate;daynormalizedNbTweets;daynormalizedFollowersCount");
+                    
+                    // Write data
+                    foreach (var dataPoint in _data)
+                    {
+                        writer.WriteLine($"{dataPoint.date:yyyy-MM-dd HH:mm:ss};" +
+                                       $"{dataPoint.date:yyyy-MM-dd HH:mm:ss};" +
+                                       $"\"{dataPoint.screen_name}\";" +
+                                       $"{dataPoint.nb_tweets};" +
+                                       $"{dataPoint.followers_count};" +
+                                       $"{dataPoint.nb_accounts_others};" +
+                                       $"{dataPoint.isAggregated.ToString().ToLower()};" +
+                                       $"{dataPoint.normalizedNbTweets:F6};" +
+                                       $"{dataPoint.normalizedFollowersCount:F6};" +
+                                       $"{dataPoint.normalizedDate:F6};" +
+                                       $"{dataPoint.daynormalizedNbTweets:F6};" +
+                                       $"{dataPoint.daynormalizedFollowersCount:F6}");
+                    }
+                }
+                
+                Debug.Log($"GhostNet normalized data dumped to: {filePath}");
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"Failed to dump GhostNet normalized data: {ex.Message}");
+            }
         }
 
         /// <summary>

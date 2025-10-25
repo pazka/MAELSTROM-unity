@@ -89,7 +89,7 @@ namespace Maelstrom.Unity
                 else
                 {
                     targetMaelstrom = Mathf.Lerp(currentMaelstrom, currentRatio, 0.1f);
-//                    Debug.Log($"Maelstrom Tgt : {targetMaelstrom}/{currentMaelstrom}");
+                    Debug.Log($"Maelstrom Tgt/Crt : {targetMaelstrom}/{currentMaelstrom}");
                 }
             }
 

@@ -115,6 +115,7 @@ namespace Maelstrom.Unity
 
             _data = dataList.ToArray();
             NormalizeData();
+            DumpNormalizedDataToCSV();
             _dataLoaded = true;
 
             Debug.Log($"Data Loaded: {_data.Length} data points");
@@ -137,6 +138,40 @@ namespace Maelstrom.Unity
             }
 
             Debug.Log("Data normalized");
+        }
+
+        /// <summary>
+        /// Dump normalized data to CSV file for analysis
+        /// </summary>
+        private void DumpNormalizedDataToCSV()
+        {
+            try
+            {
+                string fileName = $"feed_normalized_data_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
+                string filePath = Path.Combine(Application.dataPath, "..", fileName);
+                
+                using (StreamWriter writer = new StreamWriter(filePath))
+                {
+                    // Write header
+                    writer.WriteLine("date,real_date,retweetCount,normalizedRetweetCount,normalizedDate");
+                    
+                    // Write data
+                    foreach (var dataPoint in _data)
+                    {
+                        writer.WriteLine($"{dataPoint.date:yyyy-MM-dd HH:mm:ss}," +
+                                       $"{dataPoint.date:yyyy-MM-dd HH:mm:ss}," +
+                                       $"{dataPoint.retweetCount}," +
+                                       $"{dataPoint.normalizedRetweetCount:F6}," +
+                                       $"{dataPoint.normalizedDate:F6}");
+                    }
+                }
+                
+                Debug.Log($"Feed normalized data dumped to: {filePath}");
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"Failed to dump Feed normalized data: {ex.Message}");
+            }
         }
 
         /// <summary>

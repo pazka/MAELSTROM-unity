@@ -34,7 +34,7 @@ namespace Maelstrom.Unity
 
                 if (isNewDay)
                 {
-                    if (tmpDate != DateTime.MinValue) // Skip first iteration
+                    if (tmpDate != DateTime.MinValue ) // Skip first iteration
                     {
                         if (tmpAccountCount < minAccountCount) minAccountCount = tmpAccountCount;
                         if (tmpAccountCount > maxAccountCount) maxAccountCount = tmpAccountCount;
@@ -43,7 +43,10 @@ namespace Maelstrom.Unity
                     tmpDate = dataPoint.date.Date;
                 }
 
-                tmpAccountCount += dataPoint.nb_accounts_others;
+                if (!dataPoint.isAggregated)
+                {    
+                    tmpAccountCount += 1;   
+                }
             }
 
             // Handle the last day
@@ -74,7 +77,10 @@ namespace Maelstrom.Unity
 
             currentMaelstrom = CommonMaelstrom.UpdateMaelstrom((float)currentAccountCount / (float)maxAccountCount);
 
-            this.currentAccountCount += data.nb_accounts_others;
+            if (!data.isAggregated)
+            {
+                this.currentAccountCount += data.nb_accounts_others;
+            }
         }
 
         /// <summary>
