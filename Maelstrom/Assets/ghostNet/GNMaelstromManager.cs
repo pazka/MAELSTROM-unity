@@ -76,11 +76,14 @@ namespace Maelstrom.Unity
                 this.currentAccountCount = 0;
             }
 
-            currentMaelstrom = CommonMaelstrom.UpdateMaelstrom((float)currentAccountCount / (float)maxAccountCount);
+            var normalizedAccountCount = (float)currentAccountCount / (float)maxAccountCount;
+            if(normalizedAccountCount < 0.7f) normalizedAccountCount = normalizedAccountCount*1.5f;
+
+            currentMaelstrom = CommonMaelstrom.UpdateMaelstrom(normalizedAccountCount);
 
             if (!data.isAggregated)
             {
-                this.currentAccountCount += data.nb_accounts_others;
+                this.currentAccountCount += 1;
             }
         }
 
