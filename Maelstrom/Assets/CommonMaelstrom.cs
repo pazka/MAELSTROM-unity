@@ -81,7 +81,7 @@ namespace Maelstrom.Unity
                     targetMaelstrom = 1;
                     Debug.Log($"BIG Mal({netRnd}) : {targetMaelstrom}/{currentMaelstrom}");
                 }
-                else if (currentRatio > 0.3 && netRnd >= MEDIUM_MAELSTROM_THRESHOLD)
+                else if (currentRatio > 0.2 && netRnd >= MEDIUM_MAELSTROM_THRESHOLD)
                 {
                     targetMaelstrom = 0.7f;
                     Debug.Log($"MID Mal({netRnd}) : {targetMaelstrom}/{currentMaelstrom}");
