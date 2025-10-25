@@ -117,6 +117,9 @@ namespace Maelstrom.Unity
             _data = dataLoader.Data;
             _normalizedDisplayDuration = dataLoader.GetNormalizedDuration(DATA_TTL);
 
+            // Simulate and dump maelstrom data to CSV
+            maelstrom.SimulateAndDumpDailyMaelstrom(_data);
+
             // Initialize DisplayObject pool
             displayObjectPool.Initialize(screenSize);
 

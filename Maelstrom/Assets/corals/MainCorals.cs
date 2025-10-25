@@ -73,6 +73,10 @@ namespace Maelstrom.Unity
             _data = dataLoader.Data;
             _maelstromManager = new CoralsMaelstromManager();
             _maelstromManager.RegisterDataBounds(_data);
+
+            // Simulate and dump maelstrom data to CSV
+            _maelstromManager.SimulateAndDumpDailyMaelstrom(_data);
+
             Debug.Log($"Initialized corals with {_data.Length} data points");
         }
 

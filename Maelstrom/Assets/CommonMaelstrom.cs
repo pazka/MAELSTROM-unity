@@ -60,7 +60,7 @@ namespace Maelstrom.Unity
             return _udpService.GetExternalMaelstroms();
         }
 
-        public static float UpdateMaelstrom(float currentRatio)
+        public static float UpdateMaelstrom(float currentRatio,float speedModifier = 1.0f)
         {
             var rnd = new System.Random();
             var externalMaelstroms = GetExternalMaelstroms();
@@ -95,7 +95,7 @@ namespace Maelstrom.Unity
             }
 
             // Use inertia only if previous values were above 0.7
-            float lerpSpeed = hasHighPreviousValues ? 0.001f : 0.01f;
+            float lerpSpeed = (hasHighPreviousValues ? 0.001f : 0.01f) * speedModifier;
             currentMaelstrom = Mathf.Lerp(currentMaelstrom, targetMaelstrom, lerpSpeed);
 
             // Store current maelstrom in history (keep max 100 values)

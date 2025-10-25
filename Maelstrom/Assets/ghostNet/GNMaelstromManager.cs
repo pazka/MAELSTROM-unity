@@ -1,6 +1,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Unity.VisualScripting;
 using UnityEngine;
@@ -97,6 +98,73 @@ namespace Maelstrom.Unity
         public int GetCurrentAccountCount()
         {
             return currentAccountCount;
+        }
+
+        /// <summary>
+        /// Check if bounds have been registered
+        /// </summary>
+        public bool IsBoundsRegistered()
+        {
+            return boundsRegistered;
+        }
+
+        /// <summary>
+        /// Process full dataset with RegisterData and dump maelstrom results to CSV
+        /// </summary>
+        public void SimulateAndDumpDailyMaelstrom(GhostNetDataPoint[] data)
+        {
+            if (!boundsRegistered)
+            {
+                Debug.LogError("Cannot simulate maelstrom: bounds not registered");
+                return;
+            }
+
+            try
+            {
+                // Create a temporary maelstrom manager for simulation
+                var simulationMaelstrom = new GNMaelstromManager();
+                simulationMaelstrom.RegisterDataBounds(data);
+
+                // Sort data chronologically
+                var sortedData = data.OrderBy(dp => dp.date).ToArray();
+
+                // Store maelstrom values for each data point
+                var maelstromResults = new List<(DateTime date, int accountCount, float maelstromValue)>();
+
+                // Process each data point chronologically
+                foreach (var dataPoint in sortedData)
+                {
+                    simulationMaelstrom.RegisterData(dataPoint);
+                    
+                    // Store the maelstrom value after processing this data point
+                    maelstromResults.Add((
+                        dataPoint.date,
+                        dataPoint.nb_accounts_others,
+                        simulationMaelstrom.GetCurrentMaelstrom()
+                    ));
+                }
+
+                string fileName = $"ghostNet_maelstrom_results_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
+                string filePath = Path.Combine(Application.dataPath, "..", fileName);
+
+                using (StreamWriter writer = new StreamWriter(filePath))
+                {
+                    // Write header
+                    writer.WriteLine("date;accountCount;maelstromValue");
+
+                    // Write data for each data point
+                    foreach (var result in maelstromResults)
+                    {
+                        writer.WriteLine($"{result.date:yyyy-MM-dd HH:mm:ss};{result.accountCount};{result.maelstromValue:F6}");
+                    }
+                }
+
+                Debug.Log($"GhostNet maelstrom results dumped to: {filePath}");
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"Failed to simulate and dump GhostNet maelstrom results: {ex.Message}");
+            }
         }
 
     }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Unity.VisualScripting;
 using UnityEngine;
@@ -43,7 +44,7 @@ namespace Maelstrom.Unity
             {
                 throw new SystemException("no bound to compare maelstrom");
             }
-            currentMaelstrom = CommonMaelstrom.UpdateMaelstrom((float)currentNegativeSentiment / (float)maxNegativeSentiment);
+            currentMaelstrom = CommonMaelstrom.UpdateMaelstrom((float)data.neg / (float)maxNegativeSentiment, 10f);
 
             this.currentNegativeSentiment = data.neg;
         }
@@ -63,6 +64,73 @@ namespace Maelstrom.Unity
         public float GetCurrentNegativeSentiment()
         {
             return currentNegativeSentiment;
+        }
+
+        /// <summary>
+        /// Check if bounds have been registered
+        /// </summary>
+        public bool IsBoundsRegistered()
+        {
+            return boundsRegistered;
+        }
+
+        /// <summary>
+        /// Process full dataset with RegisterData and dump maelstrom results to CSV
+        /// </summary>
+        public void SimulateAndDumpDailyMaelstrom(CoralDataPoint[] data)
+        {
+            if (!boundsRegistered)
+            {
+                Debug.LogError("Cannot simulate maelstrom: bounds not registered");
+                return;
+            }
+
+            try
+            {
+                // Create a temporary maelstrom manager for simulation
+                var simulationMaelstrom = new CoralsMaelstromManager();
+                simulationMaelstrom.RegisterDataBounds(data);
+
+                // Sort data chronologically
+                var sortedData = data.OrderBy(dp => dp.date).ToArray();
+
+                // Store maelstrom values for each data point
+                var maelstromResults = new List<(DateTime date, float negativeSentiment, float maelstromValue)>();
+
+                // Process each data point chronologically
+                foreach (var dataPoint in sortedData)
+                {
+                    simulationMaelstrom.RegisterData(dataPoint);
+                    
+                    // Store the maelstrom value after processing this data point
+                    maelstromResults.Add((
+                        dataPoint.date,
+                        dataPoint.neg,
+                        simulationMaelstrom.GetCurrentMaelstrom()
+                    ));
+                }
+
+                string fileName = $"corals_maelstrom_results_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
+                string filePath = Path.Combine(Application.dataPath, "..", fileName);
+
+                using (StreamWriter writer = new StreamWriter(filePath))
+                {
+                    // Write header
+                    writer.WriteLine("date;negativeSentiment;maelstromValue");
+
+                    // Write data for each data point
+                    foreach (var result in maelstromResults)
+                    {
+                        writer.WriteLine($"{result.date:yyyy-MM-dd HH:mm:ss};{result.negativeSentiment:F6};{result.maelstromValue:F6}");
+                    }
+                }
+
+                Debug.Log($"Corals maelstrom results dumped to: {filePath}");
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"Failed to simulate and dump Corals maelstrom results: {ex.Message}");
+            }
         }
     }
 }
