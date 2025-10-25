@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Unity.VisualScripting;
 using UnityEngine;
@@ -68,9 +69,10 @@ namespace Maelstrom.Unity
                 this.currentRetweetCount = 0;
             }
 
+            this.currentRetweetCount += data.retweetCount;
+
             currentMaelstrom = CommonMaelstrom.UpdateMaelstrom((float)currentRetweetCount / (float)maxRetweetCount);
 
-            this.currentRetweetCount += data.retweetCount;
         }
 
         /// <summary>
@@ -111,6 +113,65 @@ namespace Maelstrom.Unity
         public bool IsBoundsRegistered()
         {
             return boundsRegistered;
+        }
+
+        /// <summary>
+        /// Process full dataset with RegisterData and dump maelstrom results to CSV
+        /// </summary>
+        public void SimulateAndDumpDailyMaelstrom(FeedDataPoint[] data)
+        {
+            if (!boundsRegistered)
+            {
+                Debug.LogError("Cannot simulate maelstrom: bounds not registered");
+                return;
+            }
+
+            try
+            {
+                // Create a temporary maelstrom manager for simulation
+                var simulationMaelstrom = new FeedMaelstromManager();
+                simulationMaelstrom.RegisterDataBounds(data);
+
+                // Sort data chronologically
+                var sortedData = data.OrderBy(dp => dp.date).ToArray();
+
+                // Store maelstrom values for each data point
+                var maelstromResults = new List<(DateTime date, int retweetCount, float maelstromValue)>();
+
+                // Process each data point chronologically
+                foreach (var dataPoint in sortedData)
+                {
+                    simulationMaelstrom.RegisterData(dataPoint);
+                    
+                    // Store the maelstrom value after processing this data point
+                    maelstromResults.Add((
+                        dataPoint.date,
+                        dataPoint.retweetCount,
+                        simulationMaelstrom.GetCurrentMaelstrom()
+                    ));
+                }
+
+                string fileName = $"feed_maelstrom_results_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
+                string filePath = Path.Combine(Application.dataPath, "..", fileName);
+
+                using (StreamWriter writer = new StreamWriter(filePath))
+                {
+                    // Write header
+                    writer.WriteLine("date;retweetCount;maelstromValue");
+
+                    // Write data for each data point
+                    foreach (var result in maelstromResults)
+                    {
+                        writer.WriteLine($"{result.date:yyyy-MM-dd HH:mm:ss};{result.retweetCount};{result.maelstromValue:F6}");
+                    }
+                }
+
+                Debug.Log($"Feed maelstrom results dumped to: {filePath}");
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"Failed to simulate and dump Feed maelstrom results: {ex.Message}");
+            }
         }
     }
 }

@@ -73,8 +73,9 @@ namespace Maelstrom.Unity
 
             // Check if any previous maelstrom values were above 0.7
             bool hasHighPreviousValues = maelstromHistory.Any(value => value >= 0.7f);
+            var closeToTarget = Math.Abs(targetMaelstrom - currentMaelstrom) < 0.002f;
 
-            if ((currentMaelstrom - targetMaelstrom) < 0.002f)
+            if (closeToTarget)
             {
                 if (currentRatio > 0.2 && netRnd >= HIGH_MAELSTROM_THRESHOLD)
                 {

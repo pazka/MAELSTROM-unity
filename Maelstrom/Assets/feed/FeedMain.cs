@@ -101,6 +101,9 @@ namespace Maelstrom.Unity
             // Initialize Maelstrom manager with data bounds
             maelstrom.RegisterDataBounds(_data);
 
+            // Simulate and dump daily maelstrom data to CSV
+            maelstrom.SimulateAndDumpDailyMaelstrom(_data);
+
             // Initialize DisplayObject pool
             displayObjectPool.Initialize(screenSize);
 
