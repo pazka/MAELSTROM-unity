@@ -101,7 +101,7 @@ namespace Maelstrom.Unity
                 foreach (var dataPoint in sortedData)
                 {
                     simulationMaelstrom.RegisterData(dataPoint);
-                    
+
                     // Store the maelstrom value after processing this data point
                     maelstromResults.Add((
                         dataPoint.date,

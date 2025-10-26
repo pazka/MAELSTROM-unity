@@ -24,6 +24,7 @@ namespace Maelstrom.Unity
         private static PureDataConnector _pureData;
 
         private static int updateCount = 0;
+        private static double netRnd = 0;
 
         /// <summary>
         /// Initialize the UDP service with the specified role
@@ -71,7 +72,6 @@ namespace Maelstrom.Unity
             {
                 Debug.Log($"Ext.Mal ({externalMaelstrom})");
             }
-            var netRnd = rnd.NextDouble() + externalMaelstrom;
 
             // Check if any previous maelstrom values were above 0.7
             bool hasHighPreviousValues = maelstromHistory.Any(value => value >= 0.7f);
@@ -79,7 +79,8 @@ namespace Maelstrom.Unity
 
             if (closeToTarget)
             {
-                if (currentRatio > 0.3 && netRnd >= HIGH_MAELSTROM_THRESHOLD)
+                netRnd = rnd.NextDouble();
+                if (currentRatio > 0.3 && externalMaelstrom > 0.5 && !hasHighPreviousValues)
                 {
                     targetMaelstrom = 1;
                     Debug.Log($"BIG Mal({netRnd}) : {targetMaelstrom}/{currentMaelstrom}");
@@ -109,9 +110,9 @@ namespace Maelstrom.Unity
 
             if (_isInitialized)
             {
-                if (updateCount++ > 9) updateCount = 0;
+                if (updateCount++ > 60) updateCount = 0;
 
-                _udpService.PublishCurrenMaelstrom(currentMaelstrom);
+                _udpService.PublishCurrenMaelstrom(Clamp01(currentMaelstrom));
 
                 if (updateCount == 0)
                 {
@@ -124,5 +125,7 @@ namespace Maelstrom.Unity
             }
             return currentMaelstrom;
         }
+        private static float Clamp01(float v) => v < 0f ? 0f : (v > 1f ? 1f : v);
+
     }
 }
