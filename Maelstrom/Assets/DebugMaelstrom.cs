@@ -13,7 +13,7 @@ public class DebugMaelstrom : MonoBehaviour
     void Start()
     {
         _udpService = new MaelstromUdpService();
-            _udpService.SetLocalRole(1);
+            _udpService.SetLocalRole(0);
             _udpService.Start();
     }
 

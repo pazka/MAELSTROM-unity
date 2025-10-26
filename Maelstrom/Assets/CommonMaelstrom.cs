@@ -11,8 +11,8 @@ namespace Maelstrom.Unity
 {
     public static class CommonMaelstrom
     {
-        private static float HIGH_MAELSTROM_THRESHOLD = 0.90f;
-        private static float MEDIUM_MAELSTROM_THRESHOLD = 0.80f;
+        private static float HIGH_MAELSTROM_THRESHOLD = 0.99f;
+        private static float MEDIUM_MAELSTROM_THRESHOLD = 0.94f;
 
         private static float currentMaelstrom = 0f;
         private static float targetMaelstrom = 0f;
@@ -22,6 +22,8 @@ namespace Maelstrom.Unity
         private static IMaelstromUdpService _udpService;
         private static bool _isInitialized = false;
         private static PureDataConnector _pureData;
+
+        private static int updateCount = 0;
 
         /// <summary>
         /// Initialize the UDP service with the specified role
@@ -60,7 +62,7 @@ namespace Maelstrom.Unity
             return _udpService.GetExternalMaelstroms();
         }
 
-        public static float UpdateMaelstrom(float currentRatio,float speedModifier = 1.0f)
+        public static float UpdateMaelstrom(float currentRatio, float speedModifier = 1.0f)
         {
             var rnd = new System.Random();
             var externalMaelstroms = GetExternalMaelstroms();
@@ -77,12 +79,12 @@ namespace Maelstrom.Unity
 
             if (closeToTarget)
             {
-                if (currentRatio > 0.2 && netRnd >= HIGH_MAELSTROM_THRESHOLD)
+                if (currentRatio > 0.3 && netRnd >= HIGH_MAELSTROM_THRESHOLD)
                 {
                     targetMaelstrom = 1;
                     Debug.Log($"BIG Mal({netRnd}) : {targetMaelstrom}/{currentMaelstrom}");
                 }
-                else if (currentRatio > 0.2 && netRnd >= MEDIUM_MAELSTROM_THRESHOLD)
+                else if (currentRatio > 0.3 && netRnd >= MEDIUM_MAELSTROM_THRESHOLD)
                 {
                     targetMaelstrom = 0.7f;
                     Debug.Log($"MID Mal({netRnd}) : {targetMaelstrom}/{currentMaelstrom}");
@@ -107,12 +109,17 @@ namespace Maelstrom.Unity
 
             if (_isInitialized)
             {
+                if (updateCount++ > 9) updateCount = 0;
+
                 _udpService.PublishCurrenMaelstrom(currentMaelstrom);
 
-                var allMaelstroms = _udpService.GetAllMaelstroms();
-                foreach (var kvp in allMaelstroms)
+                if (updateCount == 0)
                 {
-                    _pureData.SendOscMessage(kvp.Key, kvp.Value);
+                    var allMaelstroms = _udpService.GetAllMaelstroms();
+                    foreach (var kvp in allMaelstroms)
+                    {
+                        _pureData.SendOscMessage(kvp.Key, kvp.Value);
+                    }
                 }
             }
             return currentMaelstrom;
