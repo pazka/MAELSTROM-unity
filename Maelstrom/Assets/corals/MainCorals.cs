@@ -26,7 +26,7 @@ namespace Maelstrom.Unity
         private int _currentDataIndex = 0;
         private bool _isLooping = false;
 
-        
+
 
         private void Start()
         {
@@ -39,7 +39,7 @@ namespace Maelstrom.Unity
             positive.SetActive(true);
             negative.SetActive(true);
             neutral.SetActive(true);
-            loopDuration = config.Get("loopDuration", 1200);
+            loopDuration = config.Get("loopDuration", 2000);
             if (dataLoader == null)
             {
                 throw new System.Exception("CoralDataLoader not found! Please assign a CoralDataLoader component.");

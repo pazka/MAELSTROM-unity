@@ -173,7 +173,7 @@ namespace Maelstrom.Unity
                 var extVal = Clamp01(value);
                 externalMaelstrom[key] = extVal;
 
-                Debug.Log($"UDP : got {key} : {extVal}");
+                // Debug.Log($"UDP : got {key} : {extVal}");
             }
             catch (Exception ex)
             {

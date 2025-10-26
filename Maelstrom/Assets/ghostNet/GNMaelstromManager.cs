@@ -79,7 +79,7 @@ namespace Maelstrom.Unity
             var normalizedAccountCount = (float)currentAccountCount / (float)maxAccountCount;
             if (normalizedAccountCount < 0.7f) normalizedAccountCount = normalizedAccountCount * ((normalizedAccountCount / 0.1f) * 3f);
 
-            currentMaelstrom = CommonMaelstrom.UpdateMaelstrom(normalizedAccountCount, 0.7f);
+            currentMaelstrom = CommonMaelstrom.UpdateMaelstrom(normalizedAccountCount);
 
             if (!data.isAggregated)
             {

@@ -12,7 +12,7 @@ namespace Maelstrom.Unity
     public static class CommonMaelstrom
     {
         private static float HIGH_MAELSTROM_THRESHOLD = 0.99f;
-        private static float MEDIUM_MAELSTROM_THRESHOLD = 0.94f;
+        private static float MEDIUM_MAELSTROM_THRESHOLD = 0.80f;
 
         private static float currentMaelstrom = 0f;
         private static float targetMaelstrom = 0f;
@@ -63,7 +63,7 @@ namespace Maelstrom.Unity
             return _udpService.GetExternalMaelstroms();
         }
 
-        public static float UpdateMaelstrom(float currentRatio, float speedModifier = 1.0f)
+        public static float UpdateMaelstrom(float currentRatio, float speedModifier = 1.0f, bool isCoral = false)
         {
             var rnd = new System.Random();
             var externalMaelstroms = GetExternalMaelstroms();
@@ -74,7 +74,7 @@ namespace Maelstrom.Unity
             }
 
             // Check if any previous maelstrom values were above 0.7
-            bool hasHighPreviousValues = maelstromHistory.Any(value => value >= 0.7f);
+            bool hasHighPreviousValues = !isCoral && maelstromHistory.Any(value => value >= 0.6f);
             var closeToTarget = Math.Abs(targetMaelstrom - currentMaelstrom) < 0.002f;
 
             if (closeToTarget)
@@ -93,7 +93,7 @@ namespace Maelstrom.Unity
                 else
                 {
                     targetMaelstrom = Mathf.Lerp(currentMaelstrom, currentRatio, 0.1f);
-                    Debug.Log($"Maelstrom Tgt/Crt : {targetMaelstrom}/{currentMaelstrom}");
+                    Debug.Log($"Maelstrom Tgt/Crt : {currentRatio}, {targetMaelstrom}/{currentMaelstrom}, ext ({externalMaelstrom})");
                 }
             }
 
