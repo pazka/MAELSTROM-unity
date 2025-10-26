@@ -149,12 +149,12 @@ namespace Maelstrom.Unity
             {
                 string fileName = $"feed_normalized_data_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
                 string filePath = Path.Combine(Application.dataPath, "..", fileName);
-                
+
                 using (StreamWriter writer = new StreamWriter(filePath))
                 {
                     // Write header
                     writer.WriteLine("date;real_date;retweetCount;normalizedRetweetCount;normalizedDate");
-                    
+
                     // Write data
                     foreach (var dataPoint in _data)
                     {
@@ -165,7 +165,7 @@ namespace Maelstrom.Unity
                                        $"{dataPoint.normalizedDate:F6}");
                     }
                 }
-                
+
                 Debug.Log($"Feed normalized data dumped to: {filePath}");
             }
             catch (System.Exception ex)

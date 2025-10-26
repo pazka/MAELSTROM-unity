@@ -35,7 +35,7 @@ namespace Maelstrom.Unity
 
                 if (isNewDay)
                 {
-                    if (tmpDate != DateTime.MinValue ) // Skip first iteration
+                    if (tmpDate != DateTime.MinValue) // Skip first iteration
                     {
                         if (tmpAccountCount < minAccountCount) minAccountCount = tmpAccountCount;
                         if (tmpAccountCount > maxAccountCount) maxAccountCount = tmpAccountCount;
@@ -45,8 +45,8 @@ namespace Maelstrom.Unity
                 }
 
                 if (!dataPoint.isAggregated)
-                {    
-                    tmpAccountCount += 1;   
+                {
+                    tmpAccountCount += 1;
                 }
             }
 
@@ -77,9 +77,9 @@ namespace Maelstrom.Unity
             }
 
             var normalizedAccountCount = (float)currentAccountCount / (float)maxAccountCount;
-            if(normalizedAccountCount < 0.7f) normalizedAccountCount = normalizedAccountCount*1.5f;
+            if (normalizedAccountCount < 0.7f) normalizedAccountCount = normalizedAccountCount * ((normalizedAccountCount / 0.1f) * 3f);
 
-            currentMaelstrom = CommonMaelstrom.UpdateMaelstrom(normalizedAccountCount);
+            currentMaelstrom = CommonMaelstrom.UpdateMaelstrom(normalizedAccountCount, 0.7f);
 
             if (!data.isAggregated)
             {
@@ -138,7 +138,7 @@ namespace Maelstrom.Unity
                 foreach (var dataPoint in sortedData)
                 {
                     simulationMaelstrom.RegisterData(dataPoint);
-                    
+
                     // Store the maelstrom value after processing this data point
                     maelstromResults.Add((
                         dataPoint.date,

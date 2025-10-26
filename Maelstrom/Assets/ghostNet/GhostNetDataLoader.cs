@@ -150,18 +150,18 @@ namespace Maelstrom.Unity
             // Detect and cap outliers in followers count to prevent normalization skewing
             float cappedMaxFollowers = _dataBounds.Max.followers_count;
             float outlierThreshold = _dataBounds.Max.followers_count * 0.1f; // 10% of max
-            
+
             // Find the second highest followers count to use as cap if max is an outlier
             float secondHighestFollowers = 0f;
             foreach (var dataPoint in _data)
             {
-                if (dataPoint.followers_count > secondHighestFollowers && 
+                if (dataPoint.followers_count > secondHighestFollowers &&
                     dataPoint.followers_count < _dataBounds.Max.followers_count)
                 {
                     secondHighestFollowers = dataPoint.followers_count;
                 }
             }
-            
+
             // If the max is significantly larger than the second highest, cap it
             if (secondHighestFollowers > 0 && _dataBounds.Max.followers_count > secondHighestFollowers * 10f)
             {
@@ -212,15 +212,15 @@ namespace Maelstrom.Unity
                 // Normalize all data points for this day
                 for (int j = dayStartIndex; j < dayEndIndex; j++)
                 {
-                    if(_data[j].screen_name == "##OTHERS##")
+                    if (_data[j].screen_name == "##OTHERS##")
                     {
                         continue;
                     }
-                    
+
                     // Logarithmic normalization for the day
                     float logCurrentDayTweets = (float)Math.Log(_data[j].nb_tweets + 1);
                     float logCurrentDayFollowers = (float)Math.Log(_data[j].followers_count + 1);
-                    
+
                     _data[j].daynormalizedNbTweets = logMaxDayTweets > logMinDayTweets ?
                         (logCurrentDayTweets - logMinDayTweets) / (logMaxDayTweets - logMinDayTweets) : 0;
                     _data[j].daynormalizedFollowersCount = logMaxDayFollowers > logMinDayFollowers ?
@@ -229,12 +229,12 @@ namespace Maelstrom.Unity
                     // Logarithmic normalization for the entire data set
                     float logCurrentTweets = (float)Math.Log(_data[j].nb_tweets + 1);
                     float logCurrentFollowers = (float)Math.Log(_data[j].followers_count + 1);
-                    
+
                     _data[j].normalizedNbTweets = logMaxTweets > logMinTweets ?
                         (logCurrentTweets - logMinTweets) / (logMaxTweets - logMinTweets) : 0;
                     _data[j].normalizedFollowersCount = logMaxFollowers > logMinFollowers ?
                         (logCurrentFollowers - logMinFollowers) / (logMaxFollowers - logMinFollowers) : 0;
-                    
+
                     // Clamp normalized values to prevent values > 1.0
                     if (_data[j].normalizedNbTweets > 1.0f)
                         _data[j].normalizedNbTweets = 1.0f;
@@ -258,31 +258,31 @@ namespace Maelstrom.Unity
             {
                 string fileName = $"ghostNet_normalized_data_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
                 string filePath = Path.Combine(Application.dataPath, "..", fileName);
-                
+
                 using (StreamWriter writer = new StreamWriter(filePath))
                 {
                     // Write header
-                    writer.WriteLine("date;real_date;screen_name;nb_tweets;followers_count;nb_accounts_others;isAggregated;" +
-                                   "normalizedNbTweets;normalizedFollowersCount;normalizedDate;daynormalizedNbTweets;daynormalizedFollowersCount");
-                    
+                    writer.WriteLine("date\treal_date\tscreen_name\tnb_tweets\tfollowers_count\tnb_accounts_others\tisAggregated\t" +
+                                   "normalizedNbTweets\tnormalizedFollowersCount\tnormalizedDate\tdaynormalizedNbTweets\tdaynormalizedFollowersCount");
+
                     // Write data
                     foreach (var dataPoint in _data)
                     {
-                        writer.WriteLine($"{dataPoint.date:yyyy-MM-dd HH:mm:ss};" +
-                                       $"{dataPoint.date:yyyy-MM-dd HH:mm:ss};" +
-                                       $"\"{dataPoint.screen_name}\";" +
-                                       $"{dataPoint.nb_tweets};" +
-                                       $"{dataPoint.followers_count};" +
-                                       $"{dataPoint.nb_accounts_others};" +
-                                       $"{dataPoint.isAggregated.ToString().ToLower()};" +
-                                       $"{dataPoint.normalizedNbTweets:F6};" +
-                                       $"{dataPoint.normalizedFollowersCount:F6};" +
-                                       $"{dataPoint.normalizedDate:F6};" +
-                                       $"{dataPoint.daynormalizedNbTweets:F6};" +
+                        writer.WriteLine($"{dataPoint.date:yyyy-MM-dd HH:mm:ss}\t" +
+                                       $"{dataPoint.date:yyyy-MM-dd HH:mm:ss}\t" +
+                                       $"\"{dataPoint.screen_name}\"\t" +
+                                       $"{dataPoint.nb_tweets}\t" +
+                                       $"{dataPoint.followers_count}\t" +
+                                       $"{dataPoint.nb_accounts_others}\t" +
+                                       $"{dataPoint.isAggregated.ToString().ToLower()}\t" +
+                                       $"{dataPoint.normalizedNbTweets:F6}\t" +
+                                       $"{dataPoint.normalizedFollowersCount:F6}\t" +
+                                       $"{dataPoint.normalizedDate:F6}\t" +
+                                       $"{dataPoint.daynormalizedNbTweets:F6}\t" +
                                        $"{dataPoint.daynormalizedFollowersCount:F6}");
                     }
                 }
-                
+
                 Debug.Log($"GhostNet normalized data dumped to: {filePath}");
             }
             catch (System.Exception ex)
