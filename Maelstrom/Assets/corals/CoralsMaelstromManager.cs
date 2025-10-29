@@ -44,7 +44,7 @@ namespace Maelstrom.Unity
             {
                 throw new SystemException("no bound to compare maelstrom");
             }
-            currentMaelstrom = CommonMaelstrom.UpdateMaelstrom((float)data.neg / (float)maxNegativeSentiment, 100f, true);
+            currentMaelstrom = CommonMaelstrom.UpdateMaelstrom((float)data.neg / (float)maxNegativeSentiment, 50f, true);
 
             this.currentNegativeSentiment = data.neg;
         }

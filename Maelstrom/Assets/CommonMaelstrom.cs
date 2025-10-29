@@ -74,7 +74,7 @@ namespace Maelstrom.Unity
             }
 
             // Check if any previous maelstrom values were above 0.7
-            bool hasHighPreviousValues = !isCoral && maelstromHistory.Any(value => value >= 0.6f);
+            bool hasHighPreviousValues = maelstromHistory.Any(value => value >= 0.6f);
             var closeToTarget = Math.Abs(targetMaelstrom - currentMaelstrom) < 0.002f;
 
             if (closeToTarget)
