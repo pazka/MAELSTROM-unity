@@ -1,4 +1,4 @@
-
+using System;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -6,26 +6,22 @@ namespace Maelstrom.Unity
 {
     public class MainCorals : MonoBehaviour
     {
-
-        [Header("Data Settings")]
-        [SerializeField] private CoralsDataLoader dataLoader;
-        [Header("Data Settings")]
-        [SerializeField] private Config config;
+        [Header("Data Settings")] [SerializeField]
+        private CoralsDataLoader dataLoader;
 
         // GameObjects representing three types of corals
         [SerializeField] private GameObject positive;
         [SerializeField] private GameObject negative;
         [SerializeField] private GameObject neutral;
         [SerializeField] private PureDataConnector pureDataConnector;
+        private int _currentDataIndex;
 
         // Timing
-        private float _currentTime = 0.0f;
+        private float _currentTime;
         private CoralDataPoint[] _data;
+        private bool _isLooping;
         [SerializeField] private CoralsMaelstromManager _maelstromManager;
         private float loopDuration;
-        private int _currentDataIndex = 0;
-        private bool _isLooping = false;
-
 
 
         private void Start()
@@ -39,25 +35,18 @@ namespace Maelstrom.Unity
             positive.SetActive(true);
             negative.SetActive(true);
             neutral.SetActive(true);
-            loopDuration = config.Get("loopDuration", 2000);
+            loopDuration = Config.Get("loopDuration", 2000);
             if (dataLoader == null)
-            {
-                throw new System.Exception("CoralDataLoader not found! Please assign a CoralDataLoader component.");
-            }
+                throw new Exception("CoralDataLoader not found! Please assign a CoralDataLoader component.");
 
             // Wait for data to load
             if (dataLoader.IsDataLoaded)
-            {
                 InitializeData();
-            }
             else
-            {
                 Debug.Log("Waiting for corals data to load...");
-            }
 
-            // Initialize UDP service for corals role
-            CommonMaelstrom.InitializeUdpService(1, pureDataConnector); // 1 = corals
-
+            NetworkManager.Instance.Initialize(5001, new[] { 5000, 5002, 5003 });
+            CommonMaelstrom.InitializeWithPureData(CommonMaelstrom.RoleId.DeadComunities, pureDataConnector);
         }
 
         private void Update()
@@ -66,6 +55,11 @@ namespace Maelstrom.Unity
 
             _currentTime += Time.deltaTime;
             ProcessDataAndUpdateCorals();
+        }
+
+        private void OnDestroy()
+        {
+            CommonMaelstrom.Cleanup();
         }
 
         private void InitializeData()
@@ -96,14 +90,13 @@ namespace Maelstrom.Unity
                 Debug.Log("Corals data looped - resetting maelstrom manager");
             }
 
-            float normalizedCurrentTime = _currentTime / loopDuration;
+            var normalizedCurrentTime = _currentTime / loopDuration;
 
             // Find the two data points to interpolate between
-            int beforeIndex = -1;
-            int nextIndex = -1;
+            var beforeIndex = -1;
+            var nextIndex = -1;
 
-            for (int i = 0; i < _data.Length; i++)
-            {
+            for (var i = 0; i < _data.Length; i++)
                 if (_data[i].normalizedDate <= normalizedCurrentTime)
                 {
                     beforeIndex = i;
@@ -113,7 +106,6 @@ namespace Maelstrom.Unity
                     nextIndex = i;
                     break;
                 }
-            }
 
             // Handle edge cases
             if (beforeIndex == -1)
@@ -125,38 +117,32 @@ namespace Maelstrom.Unity
             }
 
             if (nextIndex == -1)
-            {
                 // After last data point, loop back to start
                 nextIndex = 0;
-            }
 
             // Interpolate between the two data points
-            CoralDataPoint beforeData = _data[beforeIndex];
-            CoralDataPoint nextData = _data[nextIndex];
+            var beforeData = _data[beforeIndex];
+            var nextData = _data[nextIndex];
 
             float t;
             if (nextIndex == 0)
             {
                 // Wrapping around from end to beginning
-                float timeToEnd = 1.0f - beforeData.normalizedDate;
-                float timeFromStart = nextData.normalizedDate;
-                float totalTime = timeToEnd + timeFromStart;
-                float currentTimeFromBefore = normalizedCurrentTime - beforeData.normalizedDate;
+                var timeToEnd = 1.0f - beforeData.normalizedDate;
+                var timeFromStart = nextData.normalizedDate;
+                var totalTime = timeToEnd + timeFromStart;
+                var currentTimeFromBefore = normalizedCurrentTime - beforeData.normalizedDate;
 
                 if (currentTimeFromBefore <= timeToEnd)
-                {
                     t = currentTimeFromBefore / timeToEnd;
-                }
                 else
-                {
                     t = (currentTimeFromBefore - timeToEnd) / timeFromStart;
-                }
             }
             else
             {
                 // Normal interpolation between consecutive points
-                float timeSpan = nextData.normalizedDate - beforeData.normalizedDate;
-                float currentTimeFromBefore = normalizedCurrentTime - beforeData.normalizedDate;
+                var timeSpan = nextData.normalizedDate - beforeData.normalizedDate;
+                var currentTimeFromBefore = normalizedCurrentTime - beforeData.normalizedDate;
                 t = currentTimeFromBefore / timeSpan;
             }
 
@@ -164,9 +150,9 @@ namespace Maelstrom.Unity
             t = t * t * (3.0f - 2.0f * t);
 
             // Interpolate alpha values
-            float alphaPos = Mathf.Lerp(beforeData.dayNormPos, nextData.dayNormPos, t);
-            float alphaNeu = Mathf.Lerp(beforeData.dayNormNeu, nextData.dayNormNeu, t);
-            float alphaNeg = Mathf.Lerp(beforeData.dayNormNeg, nextData.dayNormNeg, t);
+            var alphaPos = Mathf.Lerp(beforeData.dayNormPos, nextData.dayNormPos, t);
+            var alphaNeu = Mathf.Lerp(beforeData.dayNormNeu, nextData.dayNormNeu, t);
+            var alphaNeg = Mathf.Lerp(beforeData.dayNormNeg, nextData.dayNormNeg, t);
 
             // Register current data point with maelstrom manager
             _maelstromManager.RegisterData(beforeData);
@@ -176,7 +162,7 @@ namespace Maelstrom.Unity
 
         private void UpdateCoralsAlpha(float alphaPos, float alphaNeu, float alphaNeg)
         {
-            float localMaelstromValue = _maelstromManager.GetCurrentMaelstrom();
+            var localMaelstromValue = _maelstromManager.GetCurrentMaelstrom();
 
             positive.GetComponent<Renderer>().material.SetFloat("_Opacity", alphaPos);
             positive.GetComponent<Renderer>().material.SetFloat("_Maelstrom", localMaelstromValue);
@@ -202,11 +188,6 @@ namespace Maelstrom.Unity
         public int GetCurrentDataIndex()
         {
             return _currentDataIndex;
-        }
-
-        private void OnDestroy()
-        {
-            CommonMaelstrom.Cleanup();
         }
     }
 }

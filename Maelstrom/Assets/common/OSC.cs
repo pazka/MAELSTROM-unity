@@ -20,7 +20,6 @@ using System.Text;
 using System.Threading;
 using UnityEditor;
 using UnityEngine;
-using Maelstrom.Unity;
 
 namespace Maelstrom.Unity
 {
@@ -388,22 +387,22 @@ namespace Maelstrom.Unity
     public class OSC
     {
         private readonly Hashtable AddressTable;
-        private OscMessageHandler AllMessageHandler;
 
         private readonly byte[] buffer;
         private readonly int inPort;
 
         private readonly ArrayList messagesReceived;
-
-        private UdpPacketIO OscPacketIO;
         private readonly string outIp;
         private readonly int outPort;
+        private readonly Thread ReadThread;
+
+        private readonly object ReadThreadLock = new();
+        private OscMessageHandler AllMessageHandler;
+
+        private UdpPacketIO OscPacketIO;
 
         private bool paused;
         private bool ReaderRunning;
-        private readonly Thread ReadThread;
-
-        private readonly object ReadThreadLock = new object();
 
         public OSC(int inPort, string outIp, int outPort)
         {
@@ -513,7 +512,7 @@ namespace Maelstrom.Unity
         /// </summary>
         /*
     ~OSC()
-    {           
+    {
         Cancel();
         //Debug.LogError("~Osc");
     }
@@ -533,7 +532,7 @@ namespace Maelstrom.Unity
             {
                 OscPacketIO.Close();
                 OscPacketIO = null;
-                Console.WriteLine("Closed OSC listener");
+                Debug.Log("Closed OSC listener");
             }
         }
 
@@ -554,7 +553,7 @@ namespace Maelstrom.Unity
                     if (length > 0)
                         lock (ReadThreadLock)
                         {
-                            if (paused == false)
+                            if (!paused)
                             {
                                 var newMessages = PacketToOscMessages(buffer, length);
                                 messagesReceived.AddRange(newMessages);
@@ -615,7 +614,7 @@ namespace Maelstrom.Unity
         public static OscMessage StringToOscMessage(string message)
         {
             var oM = new OscMessage();
-            Console.WriteLine("Splitting " + message);
+            Debug.Log("Splitting " + message);
             var ss = message.Split(' ');
             var sE = ss.GetEnumerator();
             if (sE.MoveNext())
@@ -875,32 +874,32 @@ namespace Maelstrom.Unity
                     case ',':
                         break;
                     case 's':
-                        {
-                            var s = ExtractString(packet, index, length);
-                            index += PadSize(s.Length + 1);
-                            oscM.values.Add(s);
-                            break;
-                        }
+                    {
+                        var s = ExtractString(packet, index, length);
+                        index += PadSize(s.Length + 1);
+                        oscM.values.Add(s);
+                        break;
+                    }
                     case 'i':
-                        {
-                            var i = (packet[index++] << 24) + (packet[index++] << 16) + (packet[index++] << 8) +
-                                    packet[index++];
-                            oscM.values.Add(i);
-                            break;
-                        }
+                    {
+                        var i = (packet[index++] << 24) + (packet[index++] << 16) + (packet[index++] << 8) +
+                                packet[index++];
+                        oscM.values.Add(i);
+                        break;
+                    }
                     case 'f':
-                        {
-                            var buffer = new byte[4];
-                            buffer[3] = packet[index++];
-                            buffer[2] = packet[index++];
-                            buffer[1] = packet[index++];
-                            buffer[0] = packet[index++];
-                            var ms = new MemoryStream(buffer);
-                            var br = new BinaryReader(ms);
-                            var f = br.ReadSingle();
-                            oscM.values.Add(f);
-                            break;
-                        }
+                    {
+                        var buffer = new byte[4];
+                        buffer[3] = packet[index++];
+                        buffer[2] = packet[index++];
+                        buffer[1] = packet[index++];
+                        buffer[0] = packet[index++];
+                        var ms = new MemoryStream(buffer);
+                        var br = new BinaryReader(ms);
+                        var f = br.ReadSingle();
+                        oscM.values.Add(f);
+                        break;
+                    }
                 }
 
             messages.Add(oscM);
