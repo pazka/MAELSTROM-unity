@@ -17,7 +17,7 @@ namespace Maelstrom.Unity
         {
             if (particles == null)
             {
-                Debug.LogWarning("Particle system not assigned, cannot handle ##OTHERS## datapoint");
+                AppLogger.LogWarning("Particle system not assigned, cannot handle ##OTHERS## datapoint");
                 return;
             }
 
@@ -29,7 +29,7 @@ namespace Maelstrom.Unity
             {
                 ConfigureParticleSystem(particles, particleCount, currentMaelstrom);
                 
-                Debug.Log($"Emitted {particleCount} particles for ##OTHERS## datapoint with {dataPoint.nb_tweets} tweets");
+                AppLogger.Log($"Emitted {particleCount} particles for ##OTHERS## datapoint with {dataPoint.nb_tweets} tweets");
             }
         }
 

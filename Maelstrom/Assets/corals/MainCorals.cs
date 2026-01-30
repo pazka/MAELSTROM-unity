@@ -43,7 +43,7 @@ namespace Maelstrom.Unity
             if (dataLoader.IsDataLoaded)
                 InitializeData();
             else
-                Debug.Log("Waiting for corals data to load...");
+                AppLogger.Log("Waiting for corals data to load...");
 
             NetworkManager.Instance.Initialize(5001, new[] { 5000, 5002, 5003 });
             CommonMaelstrom.InitializeWithPureData(CommonMaelstrom.RoleId.DeadComunities, pureDataConnector);
@@ -71,7 +71,7 @@ namespace Maelstrom.Unity
             // Simulate and dump maelstrom data to CSV
             _maelstromManager.SimulateAndDumpDailyMaelstrom(_data);
 
-            Debug.Log($"Initialized corals with {_data.Length} data points");
+            AppLogger.Log($"Initialized corals with {_data.Length} data points");
         }
 
         private void ProcessDataAndUpdateCorals()
@@ -87,7 +87,7 @@ namespace Maelstrom.Unity
                 _maelstromManager = new CoralsMaelstromManager();
                 _maelstromManager.RegisterDataBounds(_data);
 
-                Debug.Log("Corals data looped - resetting maelstrom manager");
+                AppLogger.Log("Corals data looped - resetting maelstrom manager");
             }
 
             var normalizedCurrentTime = _currentTime / loopDuration;

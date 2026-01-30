@@ -30,13 +30,13 @@ namespace Maelstrom.Unity
 
             if (_isInitialized)
             {
-                Debug.LogWarning("DisplayObjectPool already initialized");
+                AppLogger.LogWarning("DisplayObjectPool already initialized");
                 return;
             }
 
             if (this.ghostNetPointPool == null)
             {
-                Debug.LogError("GhostNetPointPool is null");
+                AppLogger.LogError("GhostNetPointPool is null");
                 return;
             }
 
@@ -52,7 +52,7 @@ namespace Maelstrom.Unity
             }
 
             _isInitialized = true;
-            Debug.Log($"DisplayObjectPool initialized with {_inactiveObjects.Count} objects");
+            AppLogger.Log($"DisplayObjectPool initialized with {_inactiveObjects.Count} objects");
         }
 
         /// <summary>
@@ -61,7 +61,7 @@ namespace Maelstrom.Unity
         public void SetCenterPosition(Vector2 centerPos)
         {
             centerPosition = centerPos;
-            Debug.Log($"Center position set to: {centerPosition}");
+            AppLogger.Log($"Center position set to: {centerPosition}");
         }
 
         /// <summary>
@@ -71,7 +71,7 @@ namespace Maelstrom.Unity
         {
             if (ghostNetPointPool == null)
             {
-                Debug.LogError("GhostNetPointPool reference is null, cannot create more objects");
+                AppLogger.LogError("GhostNetPointPool reference is null, cannot create more objects");
                 return false;
             }
 
@@ -80,7 +80,7 @@ namespace Maelstrom.Unity
             // Check if we've reached the maximum pool size
             if (currentPoolSize >= maxPoolSize)
             {
-                Debug.LogWarning($"Maximum pool size reached: {maxPoolSize}, cannot create more objects");
+                AppLogger.LogWarning($"Maximum pool size reached: {maxPoolSize}, cannot create more objects");
                 return false;
             }
 
@@ -99,14 +99,14 @@ namespace Maelstrom.Unity
                 }
                 else
                 {
-                    Debug.LogWarning("GhostNetPointPool returned null, stopping object creation");
+                    AppLogger.LogWarning("GhostNetPointPool returned null, stopping object creation");
                     break;
                 }
             }
 
             if (createdCount > 0)
             {
-                Debug.Log($"Created {createdCount} new objects, total pool size: {currentPoolSize + createdCount}");
+                AppLogger.Log($"Created {createdCount} new objects, total pool size: {currentPoolSize + createdCount}");
             }
 
             return createdCount > 0;
@@ -119,7 +119,7 @@ namespace Maelstrom.Unity
         {
             if (!_isInitialized)
             {
-                Debug.LogError("DisplayObjectPool not initialized");
+                AppLogger.LogError("DisplayObjectPool not initialized");
                 return null;
             }
 
@@ -132,7 +132,7 @@ namespace Maelstrom.Unity
             }
             else
             {
-                Debug.Log($"no inactive object left : {_inactiveObjects.Count}, active objects : {_activeObjects.Count}");
+                AppLogger.Log($"no inactive object left : {_inactiveObjects.Count}, active objects : {_activeObjects.Count}");
 
                 // If no inactive objects, try to create more objects
                 if (CreateMoreObjects())
@@ -147,7 +147,7 @@ namespace Maelstrom.Unity
 
             if (displayObject == null)
             {
-                Debug.LogError("No available display objects in pool and cannot create more");
+                AppLogger.LogError("No available display objects in pool and cannot create more");
                 return null;
             }
 
@@ -161,14 +161,14 @@ namespace Maelstrom.Unity
         {
             if (!_isInitialized)
             {
-                Debug.LogError("DisplayObjectPool not initialized");
+                AppLogger.LogError("DisplayObjectPool not initialized");
                 return;
             }
 
             // Check if we can activate more objects
             if (_activeObjects.Count >= maxActiveObjects)
             {
-                Debug.LogWarning($"Max active objects limit reached: {maxActiveObjects}");
+                AppLogger.LogWarning($"Max active objects limit reached: {maxActiveObjects}");
                 return;
             }
 
@@ -176,14 +176,14 @@ namespace Maelstrom.Unity
             // Check if we've reached the limit
             if (_activeObjects.Count >= maxActiveObjects)
             {
-                Debug.LogWarning($"Max active objects limit reached during activation: {maxActiveObjects}");
+                AppLogger.LogWarning($"Max active objects limit reached during activation: {maxActiveObjects}");
                 return;
             }
 
             GhostNetDisplayObject displayObject = GetRecycledDisplayObject();
             if (displayObject == null)
             {
-                Debug.LogError("No available display objects in pool");
+                AppLogger.LogError("No available display objects in pool");
                 return;
             }
 
@@ -234,7 +234,7 @@ namespace Maelstrom.Unity
             
             if (recycledCount > 0)
             {
-//                Debug.Log($"Recycled {recycledCount} old objects. Active: {_activeObjects.Count}, Inactive: {_inactiveObjects.Count}");
+//                AppLogger.Log($"Recycled {recycledCount} old objects. Active: {_activeObjects.Count}, Inactive: {_inactiveObjects.Count}");
             }
         }
 
@@ -313,7 +313,7 @@ namespace Maelstrom.Unity
             _isInitialized = false;
             ghostNetPointPool = null; // Clear the reference
 
-            Debug.Log("DisplayObjectPool cleared and reset");
+            AppLogger.Log("DisplayObjectPool cleared and reset");
         }
 
         /// <summary>
@@ -331,7 +331,7 @@ namespace Maelstrom.Unity
                 }
             }
             _activeObjects.Clear();
-            Debug.Log($"Cleared all active objects. Active: {_activeObjects.Count}, Inactive: {_inactiveObjects.Count}");
+            AppLogger.Log($"Cleared all active objects. Active: {_activeObjects.Count}, Inactive: {_inactiveObjects.Count}");
         }
 
         /// <summary>

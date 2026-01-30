@@ -43,7 +43,7 @@ namespace Maelstrom.Unity
         {
             if (ghostNetPrefab == null)
             {
-                Debug.LogError("GhostNetPrefab is not assigned!");
+                AppLogger.LogError("GhostNetPrefab is not assigned!");
                 return null;
             }
 
@@ -77,7 +77,7 @@ namespace Maelstrom.Unity
                 return newObj;
             }
 
-            Debug.LogWarning($"GhostNet pool exhausted, total available: {_availableObjects.Count}");
+            AppLogger.LogWarning($"GhostNet pool exhausted, total available: {_availableObjects.Count}");
             return null;
         }
 

@@ -55,7 +55,7 @@ namespace Maelstrom.Unity
         {
             if (csvFile == null)
             {
-                Debug.LogError("CSV file is not assigned!");
+                AppLogger.LogError("CSV file is not assigned!");
                 return;
             }
 
@@ -124,11 +124,11 @@ namespace Maelstrom.Unity
             DumpNormalizedDataToCSV();
             _dataLoaded = true;
 
-            Debug.Log($"Data Loaded: {_data.Length} data points");
-            Debug.Log($"Data bounds: {_dataBounds.Min.date:yyyy-MM-dd} to {_dataBounds.Max.date:yyyy-MM-dd}");
-            Debug.Log($"Pos bounds: {_dataBounds.Min.pos} to {_dataBounds.Max.pos}");
-            Debug.Log($"Neu bounds: {_dataBounds.Min.neu} to {_dataBounds.Max.neu}");
-            Debug.Log($"Neg bounds: {_dataBounds.Min.neg} to {_dataBounds.Max.neg}");
+            AppLogger.Log($"Data Loaded: {_data.Length} data points");
+            AppLogger.Log($"Data bounds: {_dataBounds.Min.date:yyyy-MM-dd} to {_dataBounds.Max.date:yyyy-MM-dd}");
+            AppLogger.Log($"Pos bounds: {_dataBounds.Min.pos} to {_dataBounds.Max.pos}");
+            AppLogger.Log($"Neu bounds: {_dataBounds.Min.neu} to {_dataBounds.Max.neu}");
+            AppLogger.Log($"Neg bounds: {_dataBounds.Min.neg} to {_dataBounds.Max.neg}");
         }
 
         private void NormalizeData()
@@ -176,7 +176,7 @@ namespace Maelstrom.Unity
                 _data[i].normalizedDate = (float)((_data[i].date.Ticks - _dataBounds.Min.date.Ticks) / dateRange);
             }
 
-            Debug.Log("Data normalized with logarithmic scaling");
+            AppLogger.Log("Data normalized with logarithmic scaling");
         }
 
         /// <summary>
@@ -213,11 +213,11 @@ namespace Maelstrom.Unity
                     }
                 }
                 
-                Debug.Log($"Corals normalized data dumped to: {filePath}");
+                AppLogger.Log($"Corals normalized data dumped to: {filePath}");
             }
             catch (System.Exception ex)
             {
-                Debug.LogError($"Failed to dump Corals normalized data: {ex.Message}");
+                AppLogger.LogError($"Failed to dump Corals normalized data: {ex.Message}");
             }
         }
 

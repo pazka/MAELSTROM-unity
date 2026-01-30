@@ -36,7 +36,7 @@ namespace Maelstrom.Unity
         {
             if (displayObjectPrefab == null)
             {
-                Debug.LogError("DisplayObjectPrefab is not assigned!");
+                AppLogger.LogError("DisplayObjectPrefab is not assigned!");
                 return null;
             }
 
@@ -62,12 +62,12 @@ namespace Maelstrom.Unity
             // No available objects, create new one if under max limit
             if (_allObjects.Count < maxPoolSize)
             {
-                Debug.Log($"Creating new object, total count: {_allObjects.Count}");
+                AppLogger.Log($"Creating new object, total count: {_allObjects.Count}");
                 GameObject newObj = CreateNewObject();
                 return newObj;
             }
 
-            Debug.LogWarning($"Pool exhausted, total count: {_allObjects.Count}");
+            AppLogger.LogWarning($"Pool exhausted, total count: {_allObjects.Count}");
             return null;
         }
 
@@ -112,7 +112,7 @@ namespace Maelstrom.Unity
             }
             catch (System.Exception ex)
             {
-                Debug.LogError($"[POINT_POOL] Error during cleanup: {ex.Message}");
+                AppLogger.LogError($"[POINT_POOL] Error during cleanup: {ex.Message}");
             }
         }
     }

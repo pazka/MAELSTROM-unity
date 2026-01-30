@@ -38,10 +38,16 @@ namespace Maelstrom.Unity
         private static int updateCount;
         private static double netRnd;
         public static string[] RoleKeys = { "debug", "deadComunities", "ghostNet", "feed" };
+        public static RoleId[] RoleIds = { RoleId.Debug, RoleId.DeadComunities, RoleId.Feed, RoleId.GhostNet };
 
         public static string RoleToKey(RoleId role)
         {
             return RoleKeys[(int)role] ?? "???";
+        }
+
+        public static RoleId GetLocalRoleId()
+        {
+            return _isInitialized ? localRoleId : RoleId.Debug;
         }
 
         /// <summary>
@@ -70,7 +76,7 @@ namespace Maelstrom.Unity
             NetworkManager.Instance.ListenNetwork<FloatData>(DataTag.CurrentMaelstromValue,
                 HandleMaelstromDataReceived);
 
-            Debug.Log($"Network service initialized for role: {roleId}");
+            AppLogger.Log($"Network service initialized for role: {roleId}");
         }
 
         /// <summary>
@@ -130,9 +136,7 @@ namespace Maelstrom.Unity
 
         private static void HandleMaelstromDataReceived(FloatData data)
         {
-            Debug.Log($"Maelstrom data received: {data}");
             if (data == null) return;
-            Debug.Log($"Maelstrom data received: {data.Value}");
 
             try
             {
@@ -143,7 +147,7 @@ namespace Maelstrom.Unity
             }
             catch (Exception ex)
             {
-                Debug.LogWarning($"Error handling maelstrom data: {ex.Message}");
+                AppLogger.LogWarning($"Error handling maelstrom data: {ex.Message}");
             }
         }
 
@@ -162,13 +166,8 @@ namespace Maelstrom.Unity
             }
             catch (Exception ex)
             {
-                Debug.LogError($"Error publishing maelstrom: {ex.Message}");
+                AppLogger.LogError($"Error publishing maelstrom: {ex.Message}");
             }
-        }
-
-        private static bool IsAcceptedKey(string key)
-        {
-            return RoleKeys.Any(k => k == key);
         }
 
         public static float UpdateMaelstrom(float currentRatio, float speedModifier = 1.0f, bool isCoral = false)
@@ -178,7 +177,6 @@ namespace Maelstrom.Unity
             var externalMaelstrom = externalMaelstroms.Length > 0
                 ? externalMaelstroms.Sum() / externalMaelstroms.Length
                 : 0f;
-            if (externalMaelstrom > 0) Debug.Log($"Ext.Mal ({externalMaelstrom})");
 
             // Check if any previous maelstrom values were above 0.7
             var hasHighPreviousValues = maelstromHistory.Any(value => value >= 0.6f);
@@ -188,21 +186,14 @@ namespace Maelstrom.Unity
             {
                 netRnd = rnd.NextDouble();
                 if (currentRatio > 0.3 && externalMaelstrom > 0.5 && !hasHighPreviousValues)
-                {
                     targetMaelstrom = 1;
-                    Debug.Log($"BIG Mal({netRnd}) : {targetMaelstrom}/{currentMaelstrom}");
-                }
+                // AppLogger.Log($"BIG Mal({netRnd}) : {targetMaelstrom}/{currentMaelstrom}");
                 else if (currentRatio > 0.3 && netRnd >= MEDIUM_MAELSTROM_THRESHOLD)
-                {
                     targetMaelstrom = 0.7f;
-                    Debug.Log($"MID Mal({netRnd}) : {targetMaelstrom}/{currentMaelstrom}");
-                }
+                // AppLogger.Log($"MID Mal({netRnd}) : {targetMaelstrom}/{currentMaelstrom}");
                 else
-                {
                     targetMaelstrom = Mathf.Lerp(currentMaelstrom, currentRatio, 0.1f);
-                    Debug.Log(
-                        $"Maelstrom Tgt/Crt : {currentRatio}, {targetMaelstrom}/{currentMaelstrom}, extValue : ({externalMaelstrom})");
-                }
+                //  AppLogger.Log($"Maelstrom Tgt/Crt : {currentRatio}, {targetMaelstrom}/{currentMaelstrom}, extValue : ({externalMaelstrom})");
             }
 
             // Use inertia only if previous values were above 0.7

@@ -31,13 +31,13 @@ namespace Maelstrom.Unity
 
             if (_isInitialized)
             {
-                Debug.LogWarning("FeedDisplayObjectPool already initialized");
+                AppLogger.LogWarning("FeedDisplayObjectPool already initialized");
                 return;
             }
 
             if (this.pointPool == null)
             {
-                Debug.LogError("PointPool is null");
+                AppLogger.LogError("PointPool is null");
                 return;
             }
 
@@ -53,7 +53,7 @@ namespace Maelstrom.Unity
             }
 
             _isInitialized = true;
-            Debug.Log($"FeedDisplayObjectPool initialized with {_inactiveObjects.Count} objects");
+            AppLogger.Log($"FeedDisplayObjectPool initialized with {_inactiveObjects.Count} objects");
         }
 
         /// <summary>
@@ -63,7 +63,7 @@ namespace Maelstrom.Unity
         {
             if (pointPool == null)
             {
-                Debug.LogError("PointPool reference is null, cannot create more objects");
+                AppLogger.LogError("PointPool reference is null, cannot create more objects");
                 return false;
             }
 
@@ -72,7 +72,7 @@ namespace Maelstrom.Unity
             // Check if we've reached the maximum pool size
             if (currentPoolSize >= maxPoolSize)
             {
-                Debug.LogWarning($"Maximum pool size reached: {maxPoolSize}, cannot create more objects");
+                AppLogger.LogWarning($"Maximum pool size reached: {maxPoolSize}, cannot create more objects");
                 return false;
             }
 
@@ -91,14 +91,14 @@ namespace Maelstrom.Unity
                 }
                 else
                 {
-                    Debug.LogWarning("PointPool returned null, stopping object creation");
+                    AppLogger.LogWarning("PointPool returned null, stopping object creation");
                     break;
                 }
             }
 
             if (createdCount > 0)
             {
-                Debug.Log($"Created {createdCount} new objects, total pool size: {currentPoolSize + createdCount}");
+                AppLogger.Log($"Created {createdCount} new objects, total pool size: {currentPoolSize + createdCount}");
             }
 
             return createdCount > 0;
@@ -111,7 +111,7 @@ namespace Maelstrom.Unity
         {
             if (!_isInitialized)
             {
-                Debug.LogError("FeedDisplayObjectPool not initialized");
+                AppLogger.LogError("FeedDisplayObjectPool not initialized");
                 return null;
             }
 
@@ -124,7 +124,7 @@ namespace Maelstrom.Unity
             }
             else
             {
-                Debug.Log($"No inactive objects left: {_inactiveObjects.Count}, active objects: {_activeObjects.Count}");
+                AppLogger.Log($"No inactive objects left: {_inactiveObjects.Count}, active objects: {_activeObjects.Count}");
 
                 // If no inactive objects, try to create more objects
                 if (CreateMoreObjects())
@@ -139,7 +139,7 @@ namespace Maelstrom.Unity
 
             if (displayObject == null)
             {
-                Debug.LogError("No available display objects in pool and cannot create more");
+                AppLogger.LogError("No available display objects in pool and cannot create more");
                 return null;
             }
 
@@ -153,21 +153,21 @@ namespace Maelstrom.Unity
         {
             if (!_isInitialized)
             {
-                Debug.LogError("FeedDisplayObjectPool not initialized");
+                AppLogger.LogError("FeedDisplayObjectPool not initialized");
                 return;
             }
 
             // Check if we can activate more objects
             if (_activeObjects.Count >= maxActiveObjects)
             {
-                Debug.LogWarning($"Max active objects limit reached: {maxActiveObjects}");
+                AppLogger.LogWarning($"Max active objects limit reached: {maxActiveObjects}");
                 return;
             }
 
             FeedDisplayObject displayObject = GetRecycledDisplayObject();
             if (displayObject == null)
             {
-                Debug.LogError("No available display objects in pool");
+                AppLogger.LogError("No available display objects in pool");
                 return;
             }
 
@@ -293,11 +293,11 @@ namespace Maelstrom.Unity
                 _isInitialized = false;
                 pointPool = null; // Clear the reference
 
-                Debug.Log("FeedDisplayObjectPool cleared and reset");
+                AppLogger.Log("FeedDisplayObjectPool cleared and reset");
             }
             catch (System.Exception ex)
             {
-                Debug.LogError($"[FEED_DISPLAY_POOL] Error during cleanup: {ex.Message}");
+                AppLogger.LogError($"[FEED_DISPLAY_POOL] Error during cleanup: {ex.Message}");
             }
         }
 
@@ -315,7 +315,7 @@ namespace Maelstrom.Unity
                     _inactiveObjects.Enqueue(obj);
                 }
             }
-            Debug.Log($"Cleared all active objects. Active: {_activeObjects.Count}, Inactive: {_inactiveObjects.Count}");
+            AppLogger.Log($"Cleared all active objects. Active: {_activeObjects.Count}, Inactive: {_inactiveObjects.Count}");
         }
 
         /// <summary>

@@ -24,7 +24,7 @@ namespace Maelstrom.Unity
             string path = Path.Combine(Application.streamingAssetsPath, "config.json");
             if (!File.Exists(path))
             {
-                Debug.LogWarning($"config.json not found at {path}, using empty config.");
+                AppLogger.LogWarning($"config.json not found at {path}, using empty config.");
                 return;
             }
 
@@ -36,7 +36,7 @@ namespace Maelstrom.Unity
             }
             catch (Exception e)
             {
-                Debug.LogError($"Failed to load config: {e.Message}");
+                AppLogger.LogError($"Failed to load config: {e.Message}");
             }
         }
 
@@ -125,7 +125,7 @@ namespace Maelstrom.Unity
             }
             catch
             {
-                Debug.LogWarning($"Config key '{key}' could not be converted to {typeof(T).Name}, using default.");
+                AppLogger.LogWarning($"Config key '{key}' could not be converted to {typeof(T).Name}, using default.");
                 return defaultValue;
             }
         }

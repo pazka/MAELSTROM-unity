@@ -67,10 +67,10 @@ namespace Maelstrom.Unity
         {
             if (csvFile == null)
             {
-                Debug.LogError("CSV file is not assigned!");
+                AppLogger.LogError("CSV file is not assigned!");
                 return;
             }
-            Debug.Log("Loading ghostNetData");
+            AppLogger.Log("Loading ghostNetData");
 
             string[] lines = csvFile.text.Split('\n');
             List<GhostNetDataPoint> dataList = new List<GhostNetDataPoint>();
@@ -139,10 +139,10 @@ namespace Maelstrom.Unity
             DumpNormalizedDataToCSV();
             _dataLoaded = true;
 
-            Debug.Log($"Data Loaded: {_data.Length} data points");
-            Debug.Log($"Data bounds: {_dataBounds.Min.date:yyyy-MM-dd} to {_dataBounds.Max.date:yyyy-MM-dd}");
-            Debug.Log($"Tweets bounds: {_dataBounds.Min.nb_tweets} to {_dataBounds.Max.nb_tweets}");
-            Debug.Log($"Followers bounds: {_dataBounds.Min.followers_count} to {_dataBounds.Max.followers_count}");
+            AppLogger.Log($"Data Loaded: {_data.Length} data points");
+            AppLogger.Log($"Data bounds: {_dataBounds.Min.date:yyyy-MM-dd} to {_dataBounds.Max.date:yyyy-MM-dd}");
+            AppLogger.Log($"Tweets bounds: {_dataBounds.Min.nb_tweets} to {_dataBounds.Max.nb_tweets}");
+            AppLogger.Log($"Followers bounds: {_dataBounds.Min.followers_count} to {_dataBounds.Max.followers_count}");
         }
 
         private void NormalizeData()
@@ -166,7 +166,7 @@ namespace Maelstrom.Unity
             if (secondHighestFollowers > 0 && _dataBounds.Max.followers_count > secondHighestFollowers * 10f)
             {
                 cappedMaxFollowers = secondHighestFollowers;
-                Debug.Log($"Capped followers normalization: Original max {_dataBounds.Max.followers_count:N0} -> Capped max {cappedMaxFollowers:N0} (outlier detected)");
+                AppLogger.Log($"Capped followers normalization: Original max {_dataBounds.Max.followers_count:N0} -> Capped max {cappedMaxFollowers:N0} (outlier detected)");
             }
 
             // Pre-calculate logarithmic ranges for efficiency
@@ -246,7 +246,7 @@ namespace Maelstrom.Unity
                 }
             }
 
-            Debug.Log($"Data normalized with logarithmic scaling (optimized) - Followers range: {_dataBounds.Min.followers_count:N0} to {cappedMaxFollowers:N0}");
+            AppLogger.Log($"Data normalized with logarithmic scaling (optimized) - Followers range: {_dataBounds.Min.followers_count:N0} to {cappedMaxFollowers:N0}");
         }
 
         /// <summary>
@@ -283,11 +283,11 @@ namespace Maelstrom.Unity
                     }
                 }
 
-                Debug.Log($"GhostNet normalized data dumped to: {filePath}");
+                AppLogger.Log($"GhostNet normalized data dumped to: {filePath}");
             }
             catch (System.Exception ex)
             {
-                Debug.LogError($"Failed to dump GhostNet normalized data: {ex.Message}");
+                AppLogger.LogError($"Failed to dump GhostNet normalized data: {ex.Message}");
             }
         }
 

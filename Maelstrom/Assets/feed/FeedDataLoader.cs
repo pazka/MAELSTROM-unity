@@ -54,7 +54,7 @@ namespace Maelstrom.Unity
         {
             if (csvFile == null)
             {
-                Debug.LogError("CSV file is not assigned!");
+                AppLogger.LogError("CSV file is not assigned!");
                 return;
             }
 
@@ -118,9 +118,9 @@ namespace Maelstrom.Unity
             DumpNormalizedDataToCSV();
             _dataLoaded = true;
 
-            Debug.Log($"Data Loaded: {_data.Length} data points");
-            Debug.Log($"Data bounds: {_dataBounds.Min.date:yyyy-MM-dd HH:mm:ss} to {_dataBounds.Max.date:yyyy-MM-dd HH:mm:ss}");
-            Debug.Log($"Retweet bounds: {_dataBounds.Min.retweetCount} to {_dataBounds.Max.retweetCount}");
+            AppLogger.Log($"Data Loaded: {_data.Length} data points");
+            AppLogger.Log($"Data bounds: {_dataBounds.Min.date:yyyy-MM-dd HH:mm:ss} to {_dataBounds.Max.date:yyyy-MM-dd HH:mm:ss}");
+            AppLogger.Log($"Retweet bounds: {_dataBounds.Min.retweetCount} to {_dataBounds.Max.retweetCount}");
         }
 
         private void NormalizeData()
@@ -137,7 +137,7 @@ namespace Maelstrom.Unity
                     (_dataBounds.Max.date - _dataBounds.Min.date).TotalSeconds);
             }
 
-            Debug.Log("Data normalized");
+            AppLogger.Log("Data normalized");
         }
 
         /// <summary>
@@ -166,11 +166,11 @@ namespace Maelstrom.Unity
                     }
                 }
 
-                Debug.Log($"Feed normalized data dumped to: {filePath}");
+                AppLogger.Log($"Feed normalized data dumped to: {filePath}");
             }
             catch (System.Exception ex)
             {
-                Debug.LogError($"Failed to dump Feed normalized data: {ex.Message}");
+                AppLogger.LogError($"Failed to dump Feed normalized data: {ex.Message}");
             }
         }
 

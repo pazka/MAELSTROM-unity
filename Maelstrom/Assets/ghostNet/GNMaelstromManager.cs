@@ -118,7 +118,7 @@ namespace Maelstrom.Unity
         {
             if (!boundsRegistered)
             {
-                Debug.LogError("Cannot simulate maelstrom: bounds not registered");
+                AppLogger.LogError("Cannot simulate maelstrom: bounds not registered");
                 return;
             }
 
@@ -162,11 +162,11 @@ namespace Maelstrom.Unity
                     }
                 }
 
-                Debug.Log($"GhostNet maelstrom results dumped to: {filePath}");
+                AppLogger.Log($"GhostNet maelstrom results dumped to: {filePath}");
             }
             catch (System.Exception ex)
             {
-                Debug.LogError($"Failed to simulate and dump GhostNet maelstrom results: {ex.Message}");
+                AppLogger.LogError($"Failed to simulate and dump GhostNet maelstrom results: {ex.Message}");
             }
         }
 

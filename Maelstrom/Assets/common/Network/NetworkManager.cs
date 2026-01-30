@@ -18,6 +18,7 @@ namespace Maelstrom.Unity
         private readonly ConcurrentDictionary<DataTag, List<Delegate>> _callbacks = new();
         private readonly ConcurrentQueue<Action> _pendingCallbacks = new();
         private IUdpService _udpService;
+        private byte[] _lastLogsPayload;
 
         private NetworkManager()
         {
@@ -57,6 +58,14 @@ namespace Maelstrom.Unity
             HandleGenericDataReceived(buffer);
         }
 
+        private static bool PayloadEquals(byte[] a, byte[] b)
+        {
+            if (a == null || b == null || a.Length != b.Length) return false;
+            for (var i = 0; i < a.Length; i++)
+                if (a[i] != b[i]) return false;
+            return true;
+        }
+
         /// <summary>
         ///     Sends data over the network with the specified tag
         /// </summary>
@@ -67,16 +76,19 @@ namespace Maelstrom.Unity
         {
             if (data == null)
             {
-                Debug.LogWarning($"Cannot send null data for tag {tag}");
+                AppLogger.LogWarning($"Cannot send null data for tag {tag}");
                 return;
             }
+
+            if (_udpService == null)
+                return;
 
             try
             {
                 var payload = data.ToNetwork();
                 if (payload == null || payload.Length == 0)
                 {
-                    Debug.LogWarning($"Empty payload for tag {tag}");
+                    AppLogger.LogWarning($"Empty payload for tag {tag}");
                     return;
                 }
 
@@ -85,7 +97,7 @@ namespace Maelstrom.Unity
             }
             catch (Exception ex)
             {
-                Debug.LogError($"Error sending network data for tag {tag}: {ex.Message}");
+                AppLogger.LogError($"Error sending network data for tag {tag}: {ex.Message}");
             }
         }
 
@@ -99,7 +111,7 @@ namespace Maelstrom.Unity
         {
             if (callback == null)
             {
-                Debug.LogWarning($"Cannot register null callback for tag {tag}");
+                AppLogger.LogWarning($"Cannot register null callback for tag {tag}");
                 return;
             }
 
@@ -149,7 +161,7 @@ namespace Maelstrom.Unity
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogError($"Error preparing callback for tag {tag}: {ex.Message}");
+                    AppLogger.LogError($"Error preparing callback for tag {tag}: {ex.Message}");
                 }
         }
 
@@ -169,7 +181,7 @@ namespace Maelstrom.Unity
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogError($"Error invoking queued callback: {ex.Message}");
+                    AppLogger.LogError($"Error invoking queued callback: {ex.Message}");
                 }
 
                 processed++;
@@ -183,7 +195,7 @@ namespace Maelstrom.Unity
 
             if (parameters.Length != 1)
             {
-                Debug.LogWarning("Callback for network data must have exactly one parameter");
+                AppLogger.LogWarning("Callback for network data must have exactly one parameter");
                 return null;
             }
 
@@ -191,7 +203,7 @@ namespace Maelstrom.Unity
 
             if (!typeof(INetworkData).IsAssignableFrom(parameterType))
             {
-                Debug.LogWarning($"Callback parameter type {parameterType.Name} must implement INetworkData");
+                AppLogger.LogWarning($"Callback parameter type {parameterType.Name} must implement INetworkData");
                 return null;
             }
 
@@ -205,7 +217,7 @@ namespace Maelstrom.Unity
 
                 if (fromNetworkMethod == null)
                 {
-                    Debug.LogWarning($"Type {parameterType.Name} must have a static FromNetwork(byte[]) method");
+                    AppLogger.LogWarning($"Type {parameterType.Name} must have a static FromNetwork(byte[]) method");
                     return null;
                 }
 
@@ -213,12 +225,12 @@ namespace Maelstrom.Unity
 
                 if (deserialized != null && parameterType.IsAssignableFrom(deserialized.GetType())) return deserialized;
 
-                Debug.LogWarning($"FromNetwork method for {parameterType.Name} returned invalid type");
+                AppLogger.LogWarning($"FromNetwork method for {parameterType.Name} returned invalid type");
                 return null;
             }
             catch (Exception ex)
             {
-                Debug.LogError($"Error deserializing {parameterType.Name}: {ex.Message}");
+                AppLogger.LogError($"Error deserializing {parameterType.Name}: {ex.Message}");
                 return null;
             }
         }
@@ -250,7 +262,7 @@ namespace Maelstrom.Unity
 
                 if (buffer.Length < 4 + payloadLength)
                 {
-                    Debug.LogWarning(
+                    AppLogger.LogWarning(
                         $"Invalid message length for tag {tag}. Expected {4 + payloadLength}, got {buffer.Length}");
                     return;
                 }
@@ -258,11 +270,17 @@ namespace Maelstrom.Unity
                 var payload = new byte[payloadLength];
                 Array.Copy(buffer, 4, payload, 0, payloadLength);
 
+                if (tag == DataTag.Logs && PayloadEquals(_lastLogsPayload, payload))
+                    return;
+
+                if (tag == DataTag.Logs)
+                    _lastLogsPayload = payload;
+
                 InvokeCallbacks(tag, payload);
             }
             catch (Exception ex)
             {
-                Debug.LogError($"Error handling generic data: {ex.Message}");
+                AppLogger.LogError($"Error handling generic data: {ex.Message}");
             }
         }
 

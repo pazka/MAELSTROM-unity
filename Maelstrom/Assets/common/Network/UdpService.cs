@@ -38,7 +38,7 @@ namespace Maelstrom.Unity
             string addrV4Str = multicastAddressV4 ?? Config.Get("broadastIPv4Adress", DefaultMulticastAddressV4);
             string addrV6Str = multicastAddressV6 ?? Config.Get("multicastIPv6Adress", DefaultMulticastAddressV6);
 
-            Debug.Log($"Starting server : {listenPort}");
+            AppLogger.Log($"Starting server : {listenPort}");
             var ports = destinationPorts != null && destinationPorts.Length > 0
                 ? destinationPorts.Distinct().ToArray()
                 : new[] { listenPort };
@@ -120,7 +120,7 @@ namespace Maelstrom.Unity
                     }
                     catch (Exception ex)
                     {
-                        Debug.LogWarning($"UDP IPv4 receive error: {ex.Message}");
+                        AppLogger.LogWarning($"UDP IPv4 receive error: {ex.Message}");
                     }
             }
         }
@@ -141,7 +141,7 @@ namespace Maelstrom.Unity
                     }
                     catch (Exception ex)
                     {
-                        Debug.LogWarning($"UDP IPv6 receive error: {ex.Message}");
+                        AppLogger.LogWarning($"UDP IPv6 receive error: {ex.Message}");
                     }
             }
         }

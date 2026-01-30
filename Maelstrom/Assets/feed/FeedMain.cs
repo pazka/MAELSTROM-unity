@@ -66,7 +66,7 @@ namespace Maelstrom.Unity
             if (dataLoader.IsDataLoaded)
                 InitializeData();
             else
-                Debug.Log("Waiting for data to load...");
+                AppLogger.Log("Waiting for data to load...");
 
             NetworkManager.Instance.Initialize(5003, new[] { 5000, 5001, 5002 });
             CommonMaelstrom.InitializeWithPureData(CommonMaelstrom.RoleId.Feed, pureDataConnector);
@@ -100,7 +100,7 @@ namespace Maelstrom.Unity
             }
             catch (Exception ex)
             {
-                Debug.LogError($"[FEED_MAIN] Error during OnDisable: {ex.Message}");
+                AppLogger.LogError($"[FEED_MAIN] Error during OnDisable: {ex.Message}");
             }
         }
 
@@ -114,11 +114,11 @@ namespace Maelstrom.Unity
                 // Clean up UDP service
                 CommonMaelstrom.Cleanup();
 
-                Debug.Log($"[FEED_MAIN] Cleanup completed - Pool size: {displayObjectPool?.GetPoolSize() ?? 0}");
+                AppLogger.Log($"[FEED_MAIN] Cleanup completed - Pool size: {displayObjectPool?.GetPoolSize() ?? 0}");
             }
             catch (Exception ex)
             {
-                Debug.LogError($"[FEED_MAIN] Error during cleanup: {ex.Message}");
+                AppLogger.LogError($"[FEED_MAIN] Error during cleanup: {ex.Message}");
             }
         }
 
@@ -136,9 +136,9 @@ namespace Maelstrom.Unity
             // Initialize DisplayObject pool
             displayObjectPool.Initialize(screenSize);
 
-            Debug.Log($"Initialized with {_data.Length} data points");
-            Debug.Log($"One week in normalized data space: {_normalizedDisplayDuration:F6}");
-            Debug.Log($"DisplayObject pool initialized with {displayObjectPool.GetPoolSize()} objects");
+            AppLogger.Log($"Initialized with {_data.Length} data points");
+            AppLogger.Log($"One week in normalized data space: {_normalizedDisplayDuration:F6}");
+            AppLogger.Log($"DisplayObject pool initialized with {displayObjectPool.GetPoolSize()} objects");
         }
 
 
@@ -199,27 +199,27 @@ namespace Maelstrom.Unity
         private void LogDebugInfo()
         {
             var normalizedCurrentTime = _currentTime / loopDuration;
-            Debug.Log($"Time: {_currentTime:F1}s, Normalized: {normalizedCurrentTime:F6}, " +
+            AppLogger.Log($"Time: {_currentTime:F1}s, Normalized: {normalizedCurrentTime:F6}, " +
                       $"Active Objects: {displayObjectPool.GetActiveObjectCount()}, Data Index: {_currentDataIndex}/{_data.Length}");
 
             // Log recycling stats
-            Debug.Log($"Recycling Stats - Active: {displayObjectPool.GetActiveObjectCount()}, " +
+            AppLogger.Log($"Recycling Stats - Active: {displayObjectPool.GetActiveObjectCount()}, " +
                       $"Inactive Queue: {displayObjectPool.GetInactiveObjectCount()}, " +
                       $"Pool Size: {displayObjectPool.GetPoolSize()}");
 
             if (_currentDataIndex < _data.Length)
             {
                 var currentDataPoint = _data[_currentDataIndex];
-                Debug.Log($"  Next data point: {currentDataPoint.date:yyyy-MM-dd HH:mm:ss}, " +
+                AppLogger.Log($"  Next data point: {currentDataPoint.date:yyyy-MM-dd HH:mm:ss}, " +
                           $"Retweets: {currentDataPoint.retweetCount}, Normalized: {currentDataPoint.normalizedDate:F6}");
             }
 
             // Log current date being displayed
             if (displayObjectPool.GetActiveObjectCount() > 0)
-                Debug.Log($"  CURRENT DATE DISPLAYED: {_currentDisplayedDate:yyyy-MM-dd HH:mm:ss}");
+                AppLogger.Log($"  CURRENT DATE DISPLAYED: {_currentDisplayedDate:yyyy-MM-dd HH:mm:ss}");
 
             // Log maelstrom information
-            Debug.Log($"  MAELSTROM: {maelstrom.GetCurrentMaelstrom():F3}, " +
+            AppLogger.Log($"  MAELSTROM: {maelstrom.GetCurrentMaelstrom():F3}, " +
                       $"Current Day Retweets: {maelstrom.GetCurrentRetweetCount()}, " +
                       $"Bounds: {maelstrom.GetMinRetweetCount()}-{maelstrom.GetMaxRetweetCount()}");
         }

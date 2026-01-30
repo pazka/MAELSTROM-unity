@@ -149,6 +149,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DebugMaelstrom
   debugMesh: {fileID: 663112409}
+  logMesh: {fileID: 418557718}
 --- !u!4 &22069589
 Transform:
   m_ObjectHideFlags: 0
@@ -779,6 +780,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5d268d6a63cd4a84901ae3a0cb3c6f3f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Maelstrom.Unity.FakeMaelstrom
+  isActive: 0
 --- !u!4 &2025710302
 Transform:
   m_ObjectHideFlags: 0

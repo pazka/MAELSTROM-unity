@@ -52,7 +52,7 @@ namespace Maelstrom.Unity
 
             boundsRegistered = true;
 
-            Debug.Log($"Feed Maelstrom bounds registered - Min retweets: {minRetweetCount}, Max retweets: {maxRetweetCount}");
+            AppLogger.Log($"Feed Maelstrom bounds registered - Min retweets: {minRetweetCount}, Max retweets: {maxRetweetCount}");
         }
 
         /// <summary>
@@ -122,7 +122,7 @@ namespace Maelstrom.Unity
         {
             if (!boundsRegistered)
             {
-                Debug.LogError("Cannot simulate maelstrom: bounds not registered");
+                AppLogger.LogError("Cannot simulate maelstrom: bounds not registered");
                 return;
             }
 
@@ -166,11 +166,11 @@ namespace Maelstrom.Unity
                     }
                 }
 
-                Debug.Log($"Feed maelstrom results dumped to: {filePath}");
+                AppLogger.Log($"Feed maelstrom results dumped to: {filePath}");
             }
             catch (System.Exception ex)
             {
-                Debug.LogError($"Failed to simulate and dump Feed maelstrom results: {ex.Message}");
+                AppLogger.LogError($"Failed to simulate and dump Feed maelstrom results: {ex.Message}");
             }
         }
     }

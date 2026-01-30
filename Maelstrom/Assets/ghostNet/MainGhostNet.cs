@@ -73,7 +73,7 @@ namespace Maelstrom.Unity
             if (dataLoader.IsDataLoaded)
                 InitializeData();
             else
-                Debug.Log("Waiting for ghostNet data to load...");
+                AppLogger.Log("Waiting for ghostNet data to load...");
 
             loopDuration = Config.Get("loopDuration", 1200);
             NetworkManager.Instance.Initialize(5002, new[] { 5000, 5001, 5003 });
@@ -115,7 +115,7 @@ namespace Maelstrom.Unity
             // Clean up UDP service
             CommonMaelstrom.Cleanup();
 
-            Debug.Log($"[GHOSTNET_MAIN] Cleanup completed - Pool size: {displayObjectPool.GetPoolSize()}");
+            AppLogger.Log($"[GHOSTNET_MAIN] Cleanup completed - Pool size: {displayObjectPool.GetPoolSize()}");
         }
 
         private void InitializeData()
@@ -130,9 +130,9 @@ namespace Maelstrom.Unity
             // Initialize DisplayObject pool
             displayObjectPool.Initialize(screenSize);
 
-            Debug.Log($"Initialized ghostNet with {_data.Length} data points");
-            Debug.Log($"One day in normalized data space: {_normalizedDisplayDuration:F6}");
-            Debug.Log($"DisplayObject pool initialized with {displayObjectPool.GetPoolSize()} objects");
+            AppLogger.Log($"Initialized ghostNet with {_data.Length} data points");
+            AppLogger.Log($"One day in normalized data space: {_normalizedDisplayDuration:F6}");
+            AppLogger.Log($"DisplayObject pool initialized with {displayObjectPool.GetPoolSize()} objects");
         }
 
 
@@ -165,7 +165,7 @@ namespace Maelstrom.Unity
                 // Clear all active objects when looping to prevent accumulation
                 if (hasLooped)
                 {
-                    Debug.Log(
+                    AppLogger.Log(
                         $"LOOP DETECTED: Clearing {displayObjectPool.GetActiveObjectCount()} active objects and resetting data index");
                     displayObjectPool.ClearAllActiveObjects();
 
@@ -253,7 +253,7 @@ namespace Maelstrom.Unity
             // Sort by time of day for proper progression
             _currentDayData.Sort((a, b) => a.date.TimeOfDay.CompareTo(b.date.TimeOfDay));
 
-            //  Debug.Log($"Loaded {_currentDayData.Count} data points for day {targetDay:yyyy-MM-dd}");
+            //  AppLogger.Log($"Loaded {_currentDayData.Count} data points for day {targetDay:yyyy-MM-dd}");
         }
 
         private void SpawnDataPointsForCurrentDay(float normalizedCurrentTime)
@@ -299,11 +299,11 @@ namespace Maelstrom.Unity
 
             // Log warnings if we hit performance limits
             if (_objectsSpawnedThisFrame >= maxObjectsPerFrame)
-                Debug.LogWarning($"Performance: Hit frame limit ({maxObjectsPerFrame} objects/frame). " +
+                AppLogger.LogWarning($"Performance: Hit frame limit ({maxObjectsPerFrame} objects/frame). " +
                                  $"Remaining data points: {targetSpawnedCount - _currentDayDataIndex}");
 
             if (_objectsSpawnedThisSecond >= maxObjectsPerSecond)
-                Debug.LogWarning($"Performance: Hit second limit ({maxObjectsPerSecond} objects/second). " +
+                AppLogger.LogWarning($"Performance: Hit second limit ({maxObjectsPerSecond} objects/second). " +
                                  $"Remaining data points: {targetSpawnedCount - _currentDayDataIndex}");
         }
 
@@ -320,37 +320,37 @@ namespace Maelstrom.Unity
         private void LogDebugInfo()
         {
             var normalizedCurrentTime = _currentTime % loopDuration / loopDuration;
-            Debug.Log($"Time: {_currentTime:F1}s, Normalized: {normalizedCurrentTime:F6}, " +
+            AppLogger.Log($"Time: {_currentTime:F1}s, Normalized: {normalizedCurrentTime:F6}, " +
                       $"Active Objects: {displayObjectPool.GetActiveObjectCount()}, " +
                       $"Current Day: {_currentDay:yyyy-MM-dd}, Day Progress: {_dayProgress:F2}, " +
                       $"Data Index: {_dataIndex}/{_data.Length}");
 
             // Log recycling stats
-            Debug.Log($"Recycling Stats - Active: {displayObjectPool.GetActiveObjectCount()}, " +
+            AppLogger.Log($"Recycling Stats - Active: {displayObjectPool.GetActiveObjectCount()}, " +
                       $"Inactive Queue: {displayObjectPool.GetInactiveObjectCount()}, " +
                       $"Pool Size: {displayObjectPool.GetPoolSize()}");
 
             // Log performance metrics
-            Debug.Log($"Performance - Objects/Frame: {_objectsSpawnedThisFrame}/{maxObjectsPerFrame}, " +
+            AppLogger.Log($"Performance - Objects/Frame: {_objectsSpawnedThisFrame}/{maxObjectsPerFrame}, " +
                       $"Objects/Second: {_objectsSpawnedThisSecond}/{maxObjectsPerSecond}");
 
             // Log current day data progression
             if (_currentDayData.Count > 0)
             {
-                Debug.Log($"  Current Day Data: {_currentDayDataIndex}/{_currentDayData.Count} spawned, " +
+                AppLogger.Log($"  Current Day Data: {_currentDayDataIndex}/{_currentDayData.Count} spawned, " +
                           $"Target: {Mathf.RoundToInt(_dayProgress * _currentDayData.Count)}");
 
                 if (_currentDayDataIndex < _currentDayData.Count)
                 {
                     var nextDataPoint = _currentDayData[_currentDayDataIndex];
-                    Debug.Log($"  Next data point: {nextDataPoint.date:yyyy-MM-dd HH:mm:ss}, " +
+                    AppLogger.Log($"  Next data point: {nextDataPoint.date:yyyy-MM-dd HH:mm:ss}, " +
                               $"Tweets: {nextDataPoint.nb_tweets}, Followers: {nextDataPoint.followers_count}");
                 }
             }
 
             // Log current date being displayed
             if (displayObjectPool.GetActiveObjectCount() > 0)
-                Debug.Log($"  CURRENT DATE DISPLAYED: {_currentDisplayedDate:yyyy-MM-dd HH:mm:ss}");
+                AppLogger.Log($"  CURRENT DATE DISPLAYED: {_currentDisplayedDate:yyyy-MM-dd HH:mm:ss}");
         }
 
         // Public methods for external control
