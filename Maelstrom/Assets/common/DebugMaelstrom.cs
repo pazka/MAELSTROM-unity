@@ -1,14 +1,15 @@
 using System;
 using System.Collections.Generic;
+using System.Text;
 using Maelstrom.Unity;
 using TMPro;
 using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 public class DebugMaelstrom : MonoBehaviour
 {
-    private const int LogsSize = 30;
     private const float UiMargin = 5f;
     private const float DebugPanelWidthFraction = 0.4f;
     private const float DebugPanelHeightFraction = 0.35f;
@@ -16,6 +17,7 @@ public class DebugMaelstrom : MonoBehaviour
     private const float FontSizeMin = 5f;
     private const float FontSizeMax = 12f;
     private const float FontSizePerHeight = 1f / 27f;
+    private const float SliderSpacing = 10f;
 
     [SerializeField] private TextMeshProUGUI debugMesh;
     [SerializeField] private TextMeshProUGUI logMesh;
@@ -32,9 +34,13 @@ public class DebugMaelstrom : MonoBehaviour
     private int _lastScreenWidth;
 
     private Dictionary<CommonMaelstrom.RoleId, Color> _lineColors;
+    private bool _logsPaused;
+    private int _logsSize = 150;
+    private int _updateCount;
 
     private void Start()
     {
+        _logsPaused = false;
         Application.runInBackground = true;
         _lineColors = new Dictionary<CommonMaelstrom.RoleId, Color>
             {
@@ -67,6 +73,7 @@ public class DebugMaelstrom : MonoBehaviour
 
         NetworkManager.Instance.Initialize(5000, new[] { 5001, 5002, 5003 });
         NetworkManager.Instance.ListenNetwork<FloatData>(DataTag.TargetMaelstromValue, UpdateTargetMaelstrom);
+        NetworkManager.Instance.ListenNetwork<FloatData>(DataTag.CurrentRatio, UpdateSculptureRatio);
         NetworkManager.Instance.ListenNetwork<TextData>(DataTag.CurrentDataDate, UpdateCurrentDate);
         NetworkManager.Instance.ListenNetwork<TextData>(DataTag.Logs, UpdateLogs);
 
@@ -78,6 +85,9 @@ public class DebugMaelstrom : MonoBehaviour
 
     private void Update()
     {
+        if (Keyboard.current?.spaceKey.wasPressedThisFrame == true)
+            _logsPaused = !_logsPaused;
+
         NetworkManager.Instance.ProcessCallbacks();
 
         if (Screen.width != _lastScreenWidth || Screen.height != _lastScreenHeight)
@@ -97,7 +107,6 @@ public class DebugMaelstrom : MonoBehaviour
             debugText += $"<color=#{_lineColors[kvp.Value.Item1].ToHexString()}>{kvp.Key}: {kvp.Value.Item2}</color>\n";
         debugMesh.text = debugText;
 
-        logMesh.text = string.Join("\n", _logs);
 
         foreach (var role in CommonMaelstrom.RoleIds) UpdateLine(role);
 
@@ -105,6 +114,8 @@ public class DebugMaelstrom : MonoBehaviour
 
         if (_currentGraphPosition >= Screen.width)
             _currentGraphPosition = 0;
+
+        if (_updateCount++ > 60) _updateCount = 0;
     }
 
     public void OverrideMaelstrom(CommonMaelstrom.RoleId role, float value)
@@ -138,6 +149,7 @@ public class DebugMaelstrom : MonoBehaviour
     private void ApplyDebugUILayout()
     {
         var fontSize = Mathf.Clamp(Screen.height * FontSizePerHeight, FontSizeMin, FontSizeMax);
+        _logsSize = (int)Math.Round(Screen.height / fontSize);
 
         if (debugMesh != null)
         {
@@ -161,6 +173,44 @@ public class DebugMaelstrom : MonoBehaviour
             rt.sizeDelta = new Vector2(Screen.width * DebugPanelWidthFraction, Screen.height * LogPanelHeightFraction);
             logMesh.fontSize = fontSize;
         }
+
+        ApplySliderLayout();
+    }
+
+    private void ApplySliderLayout()
+    {
+        var sliders = new[] { sliderDeadComunities, sliderGhostNet, sliderFeed };
+        if (sliderDeadComunities == null && sliderGhostNet == null && sliderFeed == null)
+            return;
+
+        var totalWidth = 0f;
+        foreach (var s in sliders)
+        {
+            if (!s) continue;
+            totalWidth += (s.transform as RectTransform).sizeDelta.x + SliderSpacing;
+        }
+
+        totalWidth -= SliderSpacing;
+        var x = -totalWidth * 0.5f;
+
+        foreach (var slider in sliders)
+        {
+            if (!slider) continue;
+
+            var rt = slider.transform as RectTransform;
+            var w = rt.sizeDelta.x;
+            rt.anchorMin = new Vector2(0.5f, 1f);
+            rt.anchorMax = new Vector2(0.5f, 1f);
+            rt.pivot = new Vector2(0.5f, 1f);
+            rt.anchoredPosition = new Vector2(x + w * 0.5f, -UiMargin);
+            x += w + SliderSpacing;
+        }
+    }
+
+    private void UpdateSculptureRatio(FloatData data)
+    {
+        _texts[$"data_{CommonMaelstrom.RoleToKey(data.RoleId)}"] =
+            new Tuple<CommonMaelstrom.RoleId, string>(data.RoleId, data.Value.ToString("F3"));
     }
 
     private void UpdateTargetMaelstrom(FloatData data)
@@ -177,6 +227,9 @@ public class DebugMaelstrom : MonoBehaviour
 
     private void UpdateLogs(TextData data)
     {
+        if (_logsPaused)
+            return;
+
         var timestamp = DateTime.Now.ToString("HH:mm:ss.fff");
         var roleKey = CommonMaelstrom.RoleToKey(data.RoleId);
         var line = $"{timestamp} {roleKey} : {data.Text}";
@@ -184,8 +237,16 @@ public class DebugMaelstrom : MonoBehaviour
             line = $"<color=#{color.ToHexString()}>{line}</color>";
         _logs.Add(line);
 
-        if (_logs.Count > LogsSize)
+        if (_logs.Count > _logsSize)
             _logs.RemoveAt(0);
+
+        if (logMesh != null && _updateCount == 0)
+        {
+            var sb = new StringBuilder();
+            for (var i = _logs.Count - 1; i >= 0; i--)
+                sb.AppendLine(_logs[i]);
+            logMesh.text = sb.ToString();
+        }
     }
 
     private void CreateLineRenderer(CommonMaelstrom.RoleId key, Color color)

@@ -6,11 +6,12 @@ namespace Maelstrom.Unity
     public enum DataTag : ushort
     {
         CurrentMaelstromValue = 0,
+        CurrentRatio = 5,
 
         TargetMaelstromValue = 1,
 
         CurrentDataDate = 2,
         Logs = 3,
-        OverrideTargetMaelstrom = 4,
+        OverrideTargetMaelstrom = 4
     }
 }

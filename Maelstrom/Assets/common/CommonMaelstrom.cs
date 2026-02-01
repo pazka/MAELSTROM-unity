@@ -150,12 +150,14 @@ namespace Maelstrom.Unity
             }
         }
 
-        private static void PublishCurrentMaelstrom(float maelstrom)
+        private static void BroadcastCurrentValues(float currentRation)
         {
             if (!_isInitialized || localRoleId == RoleId.Debug) return;
 
             try
             {
+                NetworkManager.Instance.SendNetwork(DataTag.CurrentRatio,
+                    new FloatData(localRoleId, currentRation));
                 NetworkManager.Instance.SendNetwork(DataTag.TargetMaelstromValue,
                     new FloatData(localRoleId, targetMaelstrom));
                 NetworkManager.Instance.SendNetwork(DataTag.CurrentMaelstromValue,
@@ -199,10 +201,11 @@ namespace Maelstrom.Unity
             if (closeToTarget)
             {
                 netRnd = rnd.NextDouble();
+                AppLogger.Log($"netRnd({netRnd:F2}), ext:{externalMaestrom:F2}");
                 if (currentRatio > 0.3 && externalMaestrom > 0.5 && !hasHighPreviousValues)
                 {
                     setTarget(1f);
-                    AppLogger.Log($"BIG Mal(ext : {externalMaestrom} > 0.5) ");
+                    AppLogger.Log($"BIG Mal(ext : {externalMaestrom:F2} > 0.5) ");
                 }
                 else if (currentRatio > 0.3 && netRnd >= MEDIUM_MAELSTROM_THRESHOLD)
                 {
@@ -225,7 +228,7 @@ namespace Maelstrom.Unity
             maelstromHistory.Enqueue(targetMaelstrom);
             if (maelstromHistory.Count > 100) maelstromHistory.Dequeue();
 
-            PublishCurrentMaelstrom(Clamp01(currentMaelstrom));
+            BroadcastCurrentValues(currentRatio);
 
             return currentMaelstrom;
         }
