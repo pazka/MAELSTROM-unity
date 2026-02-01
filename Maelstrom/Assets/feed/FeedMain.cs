@@ -43,6 +43,7 @@ namespace Maelstrom.Unity
 
         private void Start()
         {
+            Application.runInBackground = true;
             if (SceneManager.GetActiveScene().name != "FeedScene")
             {
                 gameObject.SetActive(false);
@@ -199,75 +200,24 @@ namespace Maelstrom.Unity
         private void LogDebugInfo()
         {
             var normalizedCurrentTime = _currentTime / loopDuration;
-            AppLogger.Log($"Time: {_currentTime:F1}s, Normalized: {normalizedCurrentTime:F6}, " +
-                          $"Active Objects: {displayObjectPool.GetActiveObjectCount()}, Data Index: {_currentDataIndex}/{_data.Length}");
+            // AppLogger.Log(
+            //     $"Active Objects: {displayObjectPool.GetActiveObjectCount()})");
 
             // Log recycling stats
-            AppLogger.Log($"Recycling Stats - Active: {displayObjectPool.GetActiveObjectCount()}, " +
-                          $"Inactive Queue: {displayObjectPool.GetInactiveObjectCount()}, " +
-                          $"Pool Size: {displayObjectPool.GetPoolSize()}");
+            // AppLogger.Log($"Recycling Stats - Active: {displayObjectPool.GetActiveObjectCount()}, " +
+            //               $"Inactive Queue: {displayObjectPool.GetInactiveObjectCount()}, " +
+            //               $"Pool Size: {displayObjectPool.GetPoolSize()}");
 
-            if (_currentDataIndex < _data.Length)
-            {
-                var currentDataPoint = _data[_currentDataIndex];
-                AppLogger.Log($"  Next data point: {currentDataPoint.date:yyyy-MM-dd HH:mm:ss}, " +
-                              $"Retweets: {currentDataPoint.retweetCount}, Normalized: {currentDataPoint.normalizedDate:F6}");
-            }
 
             // Log current date being displayed
-            if (displayObjectPool.GetActiveObjectCount() > 0)
-                AppLogger.Log($"  CURRENT DATE DISPLAYED: {_currentDisplayedDate:yyyy-MM-dd HH:mm:ss}");
+            NetworkManager.Instance.SendNetwork(DataTag.CurrentDataDate,
+                new TextData(CommonMaelstrom.RoleId.Feed,
+                    $" Data Index: {_currentDataIndex}/{_data.Length} => {normalizedCurrentTime:F2}({_currentDisplayedDate:yyyy-MM-dd})"));
 
             // Log maelstrom information
-            AppLogger.Log($"  MAELSTROM: {maelstrom.GetCurrentMaelstrom():F3}, " +
-                          $"Current Day Retweets: {maelstrom.GetCurrentRetweetCount()}, " +
-                          $"Bounds: {maelstrom.GetMinRetweetCount()}-{maelstrom.GetMaxRetweetCount()}");
-        }
-
-        // Public methods for external control
-        public void SetScreenSize(Vector2 newScreenSize)
-        {
-            screenSize = newScreenSize;
-        }
-
-        public void SetLoopDuration(float newLoopDuration)
-        {
-            loopDuration = newLoopDuration;
-        }
-
-        public int GetActiveObjectCount()
-        {
-            return displayObjectPool.GetActiveObjectCount();
-        }
-
-        public float GetCurrentTime()
-        {
-            return _currentTime;
-        }
-
-        public DateTime GetCurrentDisplayedDate()
-        {
-            return _currentDisplayedDate;
-        }
-
-        public int GetInactiveObjectCount()
-        {
-            return displayObjectPool.GetInactiveObjectCount();
-        }
-
-        public int GetDisplayObjectPoolSize()
-        {
-            return displayObjectPool.GetPoolSize();
-        }
-
-        public float GetCurrentMaelstrom()
-        {
-            return maelstrom.GetCurrentMaelstrom();
-        }
-
-        public int GetCurrentDayRetweetCount()
-        {
-            return maelstrom.GetCurrentRetweetCount();
+            // AppLogger.Log(
+            //     $"Current Day Retweets: {maelstrom.GetCurrentRetweetCount()}, " +
+            //     $"Bounds: {maelstrom.GetMinRetweetCount()}-{maelstrom.GetMaxRetweetCount()}");
         }
     }
 }

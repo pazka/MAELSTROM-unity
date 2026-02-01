@@ -1,33 +1,33 @@
-
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Unity.VisualScripting;
 using UnityEngine;
+using Random = System.Random;
 
 namespace Maelstrom.Unity
 {
     /// <summary>
-    /// Manages the maelstrom value based on GhostNet data behavior
+    ///     Manages the maelstrom value based on GhostNet data behavior
     /// </summary>
     public class GNMaelstromManager
     {
-        private GhostNetDataBound dataBounds;
-        private bool boundsRegistered = false;
-        private float currentMaelstrom = 0f;
+        private readonly Random rnd = new();
+        private bool boundsRegistered;
+        private int currentAccountCount;
         private DateTime currentDate;
-        private int currentAccountCount = 0;
+        private float currentMaelstrom;
+        private GhostNetDataBound dataBounds;
+        private int maxAccountCount;
         private int minAccountCount = int.MaxValue;
-        private int maxAccountCount = 0;
 
         /// <summary>
-        /// Register data bounds during initial data loading to understand the data shape
+        ///     Register data bounds during initial data loading to understand the data shape
         /// </summary>
         public void RegisterDataBounds(GhostNetDataPoint[] data)
         {
-            DateTime tmpDate = DateTime.MinValue;
-            int tmpAccountCount = 0;
+            var tmpDate = DateTime.MinValue;
+            var tmpAccountCount = 0;
 
             foreach (var dataPoint in data)
             {
@@ -40,14 +40,12 @@ namespace Maelstrom.Unity
                         if (tmpAccountCount < minAccountCount) minAccountCount = tmpAccountCount;
                         if (tmpAccountCount > maxAccountCount) maxAccountCount = tmpAccountCount;
                     }
+
                     tmpAccountCount = 0;
                     tmpDate = dataPoint.date.Date;
                 }
 
-                if (!dataPoint.isAggregated)
-                {
-                    tmpAccountCount += 1;
-                }
+                if (!dataPoint.isAggregated) tmpAccountCount += 1;
             }
 
             // Handle the last day
@@ -58,37 +56,32 @@ namespace Maelstrom.Unity
         }
 
         /// <summary>
-        /// Register individual data points for real-time processing
+        ///     Register individual data points for real-time processing
         /// </summary>
         public void RegisterData(GhostNetDataPoint data)
         {
-            if (!boundsRegistered)
-            {
-                throw new SystemException("no bound to compare maelstrom");
-            }
+            if (!boundsRegistered) throw new SystemException("no bound to compare maelstrom");
 
-            DateTime currentDate = data.date.Date;
+            var currentDate = data.date.Date;
             var isNewDay = currentDate != this.currentDate;
 
             if (isNewDay)
             {
                 this.currentDate = currentDate;
-                this.currentAccountCount = 0;
+                currentAccountCount = 0;
             }
 
-            var normalizedAccountCount = (float)currentAccountCount / (float)maxAccountCount;
-            if (normalizedAccountCount < 0.7f) normalizedAccountCount = normalizedAccountCount * ((normalizedAccountCount / 0.1f) * 3f);
+            var normalizedAccountCount = currentAccountCount / (float)maxAccountCount;
+            if (normalizedAccountCount < 0.7f)
+                normalizedAccountCount = normalizedAccountCount * (normalizedAccountCount / 0.1f * 3f);
 
-            currentMaelstrom = CommonMaelstrom.UpdateMaelstrom(normalizedAccountCount);
+            currentMaelstrom = CommonMaelstrom.UpdateMaelstrom(normalizedAccountCount, rnd.NextDouble());
 
-            if (!data.isAggregated)
-            {
-                this.currentAccountCount += 1;
-            }
+            if (!data.isAggregated) currentAccountCount += 1;
         }
 
         /// <summary>
-        /// Get the current maelstrom value
+        ///     Get the current maelstrom value
         /// </summary>
         public float GetCurrentMaelstrom()
         {
@@ -96,7 +89,7 @@ namespace Maelstrom.Unity
         }
 
         /// <summary>
-        /// Get the current account count for the day
+        ///     Get the current account count for the day
         /// </summary>
         public int GetCurrentAccountCount()
         {
@@ -104,7 +97,7 @@ namespace Maelstrom.Unity
         }
 
         /// <summary>
-        /// Check if bounds have been registered
+        ///     Check if bounds have been registered
         /// </summary>
         public bool IsBoundsRegistered()
         {
@@ -112,7 +105,7 @@ namespace Maelstrom.Unity
         }
 
         /// <summary>
-        /// Process full dataset with RegisterData and dump maelstrom results to CSV
+        ///     Process full dataset with RegisterData and dump maelstrom results to CSV
         /// </summary>
         public void SimulateAndDumpDailyMaelstrom(GhostNetDataPoint[] data)
         {
@@ -147,28 +140,26 @@ namespace Maelstrom.Unity
                     ));
                 }
 
-                string fileName = $"ghostNet_maelstrom_results_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
-                string filePath = Path.Combine(Application.dataPath, "..", fileName);
+                var fileName = $"ghostNet_maelstrom_results_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
+                var filePath = Path.Combine(Application.dataPath, "..", fileName);
 
-                using (StreamWriter writer = new StreamWriter(filePath))
+                using (var writer = new StreamWriter(filePath))
                 {
                     // Write header
                     writer.WriteLine("date;accountCount;maelstromValue");
 
                     // Write data for each data point
                     foreach (var result in maelstromResults)
-                    {
-                        writer.WriteLine($"{result.date:yyyy-MM-dd HH:mm:ss};{result.accountCount};{result.maelstromValue:F6}");
-                    }
+                        writer.WriteLine(
+                            $"{result.date:yyyy-MM-dd HH:mm:ss};{result.accountCount};{result.maelstromValue:F6}");
                 }
 
                 AppLogger.Log($"GhostNet maelstrom results dumped to: {filePath}");
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
                 AppLogger.LogError($"Failed to simulate and dump GhostNet maelstrom results: {ex.Message}");
             }
         }
-
     }
 }

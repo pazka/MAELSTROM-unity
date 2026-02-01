@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UnityEngine;
+using Random = System.Random;
 
 namespace Maelstrom.Unity
 {
@@ -11,6 +12,7 @@ namespace Maelstrom.Unity
     /// </summary>
     public class CoralsMaelstromManager
     {
+        private readonly Random rnd = new();
         private bool boundsRegistered;
         private DateTime currentDate;
         private float currentMaelstrom;
@@ -44,9 +46,15 @@ namespace Maelstrom.Unity
                 CommonMaelstrom.RoleId.DeadComunities,
                 $"{data.normalizedDate:F2}({data.date:yyyy-MM-dd})"));
             if (!boundsRegistered) throw new SystemException("no bound to compare maelstrom");
-            currentMaelstrom = CommonMaelstrom.UpdateMaelstrom(data.neg / maxNegativeSentiment);
-
             currentNegativeSentiment = data.neg;
+            currentMaelstrom =
+                CommonMaelstrom.UpdateMaelstrom(currentNegativeSentiment / maxNegativeSentiment, rnd.NextDouble());
+        }
+
+        public void UpdateMaelstrom()
+        {
+            currentMaelstrom =
+                CommonMaelstrom.UpdateMaelstrom(currentNegativeSentiment / maxNegativeSentiment);
         }
 
 

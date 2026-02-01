@@ -122,7 +122,10 @@ namespace Maelstrom.Unity
                 nextIndex = 0;
 
             var nextData = _data[nextIndex];
-            _maelstromManager.RegisterData(nextData);
+            if (_lastDisplayedDataIndex != nextIndex) _maelstromManager.RegisterData(nextData);
+            else
+                _maelstromManager.UpdateMaelstrom();
+            _lastDisplayedDataIndex = nextIndex;
 
             float alphaPos, alphaNeu, alphaNeg;
             if (nextIndex > beforeIndex)

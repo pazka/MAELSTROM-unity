@@ -19,7 +19,7 @@ namespace Maelstrom.Unity
 
             var rnd = new Random();
             var target = rnd.NextDouble();
-            CommonMaelstrom.UpdateMaelstrom((float)rnd.NextDouble());
+            CommonMaelstrom.UpdateMaelstrom((float)rnd.NextDouble(), (float)rnd.NextDouble());
             NetworkManager.Instance.SendNetwork(DataTag.CurrentDataDate,
                 new TextData(CommonMaelstrom.RoleId.Feed, "Some text"));
         }

@@ -17,8 +17,8 @@ namespace Maelstrom.Unity
             Feed = 3
         }
 
-        private static float HIGH_MAELSTROM_THRESHOLD = 0.99f;
-        private static readonly float MEDIUM_MAELSTROM_THRESHOLD = 0.80f;
+        private static readonly float HIGH_MAELSTROM_THRESHOLD = 0.99f;
+        private static readonly float MEDIUM_MAELSTROM_THRESHOLD = 0.94f;
 
 
         private static float currentMaelstrom;
@@ -37,7 +37,6 @@ namespace Maelstrom.Unity
         private static RoleId localRoleId; // 1=corals,2=ghostNet,3=feed
 
         private static int updateCount;
-        private static double netRnd;
         public static string[] RoleKeys = { "debug", "deadComunities", "ghostNet", "feed" };
         public static RoleId[] RoleIds = { RoleId.Debug, RoleId.DeadComunities, RoleId.Feed, RoleId.GhostNet };
 
@@ -186,13 +185,14 @@ namespace Maelstrom.Unity
             }
         }
 
-        public static float UpdateMaelstrom(float currentRatio, float speedModifier = 1.0f)
+        public static float UpdateMaelstrom(float currentRatio, double netRnd = 0f, float speedModifier = 1.0f)
         {
             var rnd = new Random();
             var externalMaelstromsValues = GetExternalMaelstroms();
             var externalMaestrom = externalMaelstromsValues.Length > 0
                 ? externalMaelstromsValues.Sum() / externalMaelstromsValues.Length
                 : 0f;
+            var influencedRnd = netRnd + externalMaestrom * 0.3;
 
             // Check if any previous maelstrom values were above 0.6
             var hasHighPreviousValues = targetMaelstromHistory.Any(value => value >= 0.6f);
@@ -200,23 +200,23 @@ namespace Maelstrom.Unity
 
             if (closeToTarget)
             {
-                netRnd = rnd.NextDouble();
-                // AppLogger.Log($"netRnd({netRnd:F2}), ");
-                if (currentRatio > 0.3 && externalMaestrom > 0.6 && !hasHighPreviousValues)
+                if (influencedRnd >= HIGH_MAELSTROM_THRESHOLD)
                 {
                     setTarget(1f);
-                    AppLogger.Log($"BIG Mal(ext : {externalMaestrom:F2} > 0.6) ");
+                    AppLogger.Log(
+                        $"BIG Rnd(${netRnd:F3}/Ext(${externalMaestrom:F2})/ => Inf(${influencedRnd:F2}) > ${HIGH_MAELSTROM_THRESHOLD}) ");
                 }
-                else if (currentRatio > 0.3 && netRnd >= MEDIUM_MAELSTROM_THRESHOLD)
+                else if (influencedRnd >= MEDIUM_MAELSTROM_THRESHOLD)
                 {
                     setTarget(0.7f);
-                    AppLogger.Log($"MID Mal({netRnd}), ratio : ({currentRatio:F2},ext:{externalMaestrom:F2})");
+                    AppLogger.Log(
+                        $"BIG Rnd(${netRnd:F3}/Ext(${externalMaestrom:F2})/ => Inf(${influencedRnd:F2}) > ${MEDIUM_MAELSTROM_THRESHOLD}) ");
                 }
                 else
                 {
                     setTarget(Mathf.Lerp(currentMaelstrom, currentRatio, 0.1f));
-                    //  AppLogger.Log(
-                    //    $"Maelstrom Tgt/Crt : {currentRatio}, {targetMaelstrom}, extValue : ({externalMaestrom})");
+                    // AppLogger.Log(
+                    //     $"Maelstrom Tgt/Crt : {currentRatio}, {targetMaelstrom}, extValue : ({externalMaestrom})");
                 }
             }
 

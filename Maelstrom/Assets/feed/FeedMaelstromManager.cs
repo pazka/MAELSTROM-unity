@@ -2,31 +2,32 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Unity.VisualScripting;
 using UnityEngine;
+using Random = System.Random;
 
 namespace Maelstrom.Unity
 {
     /// <summary>
-    /// Manages the maelstrom value based on Feed retweet data behavior
+    ///     Manages the maelstrom value based on Feed retweet data behavior
     /// </summary>
     public class FeedMaelstromManager
     {
-        private FeedDataBound dataBounds;
-        private bool boundsRegistered = false;
-        private float currentMaelstrom = 0f;
+        private readonly Random rnd = new();
+        private bool boundsRegistered;
         private DateTime currentDate;
-        private int currentRetweetCount = 0;
+        private float currentMaelstrom;
+        private int currentRetweetCount;
+        private FeedDataBound dataBounds;
+        private int maxRetweetCount;
         private int minRetweetCount = int.MaxValue;
-        private int maxRetweetCount = 0;
 
         /// <summary>
-        /// Register data bounds during initial data loading to understand the data shape
+        ///     Register data bounds during initial data loading to understand the data shape
         /// </summary>
         public void RegisterDataBounds(FeedDataPoint[] data)
         {
-            DateTime tmpDate = DateTime.MinValue;
-            int tmpRetweetCount = 0;
+            var tmpDate = DateTime.MinValue;
+            var tmpRetweetCount = 0;
 
             foreach (var dataPoint in data)
             {
@@ -39,6 +40,7 @@ namespace Maelstrom.Unity
                         if (tmpRetweetCount < minRetweetCount) minRetweetCount = tmpRetweetCount;
                         if (tmpRetweetCount > maxRetweetCount) maxRetweetCount = tmpRetweetCount;
                     }
+
                     tmpRetweetCount = 0;
                     tmpDate = dataPoint.date.Date;
                 }
@@ -52,31 +54,38 @@ namespace Maelstrom.Unity
 
             boundsRegistered = true;
 
-            AppLogger.Log($"Feed Maelstrom bounds registered - Min retweets: {minRetweetCount}, Max retweets: {maxRetweetCount}");
+            AppLogger.Log(
+                $"Feed Maelstrom bounds registered - Min retweets: {minRetweetCount}, Max retweets: {maxRetweetCount}");
         }
 
         /// <summary>
-        /// Register individual data points for real-time processing
+        ///     Register individual data points for real-time processing
         /// </summary>
         public void RegisterData(FeedDataPoint data)
         {
-            DateTime currentDate = data.date.Date;
-            var isNewDay = currentDate != this.currentDate;
+            var newDate = data.date.Date;
+            var isNewDay = newDate != currentDate;
 
             if (isNewDay)
             {
-                this.currentDate = currentDate;
-                this.currentRetweetCount = 0;
+                currentRetweetCount += data.retweetCount;
+                AppLogger.Log(
+                    $"DATA:{currentRetweetCount / (float)maxRetweetCount:F2}, RT:{currentRetweetCount}/{maxRetweetCount}");
+                currentMaelstrom =
+                    CommonMaelstrom.UpdateMaelstrom(currentRetweetCount / (float)maxRetweetCount, rnd.NextDouble());
+
+                currentDate = newDate;
+                currentRetweetCount = 0;
             }
-
-            this.currentRetweetCount += data.retweetCount;
-
-            currentMaelstrom = CommonMaelstrom.UpdateMaelstrom((float)currentRetweetCount / (float)maxRetweetCount);
-
+            else
+            {
+                currentRetweetCount += data.retweetCount;
+                currentMaelstrom = CommonMaelstrom.UpdateMaelstrom(currentRetweetCount / (float)maxRetweetCount);
+            }
         }
 
         /// <summary>
-        /// Get the current maelstrom value
+        ///     Get the current maelstrom value
         /// </summary>
         public float GetCurrentMaelstrom()
         {
@@ -84,7 +93,7 @@ namespace Maelstrom.Unity
         }
 
         /// <summary>
-        /// Get the current retweet count for the day
+        ///     Get the current retweet count for the day
         /// </summary>
         public int GetCurrentRetweetCount()
         {
@@ -92,7 +101,7 @@ namespace Maelstrom.Unity
         }
 
         /// <summary>
-        /// Get the minimum retweet count across all days
+        ///     Get the minimum retweet count across all days
         /// </summary>
         public int GetMinRetweetCount()
         {
@@ -100,7 +109,7 @@ namespace Maelstrom.Unity
         }
 
         /// <summary>
-        /// Get the maximum retweet count across all days
+        ///     Get the maximum retweet count across all days
         /// </summary>
         public int GetMaxRetweetCount()
         {
@@ -108,7 +117,7 @@ namespace Maelstrom.Unity
         }
 
         /// <summary>
-        /// Check if bounds have been registered
+        ///     Check if bounds have been registered
         /// </summary>
         public bool IsBoundsRegistered()
         {
@@ -116,7 +125,7 @@ namespace Maelstrom.Unity
         }
 
         /// <summary>
-        /// Process full dataset with RegisterData and dump maelstrom results to CSV
+        ///     Process full dataset with RegisterData and dump maelstrom results to CSV
         /// </summary>
         public void SimulateAndDumpDailyMaelstrom(FeedDataPoint[] data)
         {
@@ -142,7 +151,7 @@ namespace Maelstrom.Unity
                 foreach (var dataPoint in sortedData)
                 {
                     simulationMaelstrom.RegisterData(dataPoint);
-                    
+
                     // Store the maelstrom value after processing this data point
                     maelstromResults.Add((
                         dataPoint.date,
@@ -151,24 +160,23 @@ namespace Maelstrom.Unity
                     ));
                 }
 
-                string fileName = $"feed_maelstrom_results_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
-                string filePath = Path.Combine(Application.dataPath, "..", fileName);
+                var fileName = $"feed_maelstrom_results_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
+                var filePath = Path.Combine(Application.dataPath, "..", fileName);
 
-                using (StreamWriter writer = new StreamWriter(filePath))
+                using (var writer = new StreamWriter(filePath))
                 {
                     // Write header
                     writer.WriteLine("date;retweetCount;maelstromValue");
 
                     // Write data for each data point
                     foreach (var result in maelstromResults)
-                    {
-                        writer.WriteLine($"{result.date:yyyy-MM-dd HH:mm:ss};{result.retweetCount};{result.maelstromValue:F6}");
-                    }
+                        writer.WriteLine(
+                            $"{result.date:yyyy-MM-dd HH:mm:ss};{result.retweetCount};{result.maelstromValue:F6}");
                 }
 
                 AppLogger.Log($"Feed maelstrom results dumped to: {filePath}");
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
                 AppLogger.LogError($"Failed to simulate and dump Feed maelstrom results: {ex.Message}");
             }
