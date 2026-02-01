@@ -20,6 +20,7 @@ namespace Maelstrom.Unity
         private float _currentTime;
         private CoralDataPoint[] _data;
         private bool _isLooping;
+        private int _lastDisplayedDataIndex = -1;
         [SerializeField] private CoralsMaelstromManager _maelstromManager;
         private float loopDuration;
 
@@ -78,6 +79,7 @@ namespace Maelstrom.Unity
             {
                 _currentTime = 0.0f;
                 _currentDataIndex = 0;
+                _lastDisplayedDataIndex = -1;
                 _isLooping = true;
 
                 // Reset maelstrom manager for new loop
@@ -104,55 +106,41 @@ namespace Maelstrom.Unity
                     break;
                 }
 
-            // Handle edge cases
             if (beforeIndex == -1)
             {
-                // Before first data point, use first data point
-                _maelstromManager.RegisterData(_data[0]);
+                if (_lastDisplayedDataIndex != 0)
+                {
+                    _maelstromManager.RegisterData(_data[0]);
+                    _lastDisplayedDataIndex = 0;
+                }
+
                 UpdateCoralsAlpha(_data[0].dayNormPos, _data[0].dayNormNeu, _data[0].dayNormNeg);
                 return;
             }
 
             if (nextIndex == -1)
-                // After last data point, loop back to start
                 nextIndex = 0;
 
-            // Interpolate between the two data points
-            var beforeData = _data[beforeIndex];
             var nextData = _data[nextIndex];
+            _maelstromManager.RegisterData(nextData);
 
-            float t;
-            if (nextIndex == 0)
+            float alphaPos, alphaNeu, alphaNeg;
+            if (nextIndex > beforeIndex)
             {
-                // Wrapping around from end to beginning
-                var timeToEnd = 1.0f - beforeData.normalizedDate;
-                var timeFromStart = nextData.normalizedDate;
-                var totalTime = timeToEnd + timeFromStart;
-                var currentTimeFromBefore = normalizedCurrentTime - beforeData.normalizedDate;
-
-                if (currentTimeFromBefore <= timeToEnd)
-                    t = currentTimeFromBefore / timeToEnd;
-                else
-                    t = (currentTimeFromBefore - timeToEnd) / timeFromStart;
+                var beforeData = _data[beforeIndex];
+                var dateBefore = beforeData.normalizedDate;
+                var dateNext = nextData.normalizedDate;
+                var t = Mathf.Clamp01((normalizedCurrentTime - dateBefore) / (dateNext - dateBefore));
+                alphaPos = Mathf.Lerp(beforeData.dayNormPos, nextData.dayNormPos, t);
+                alphaNeu = Mathf.Lerp(beforeData.dayNormNeu, nextData.dayNormNeu, t);
+                alphaNeg = Mathf.Lerp(beforeData.dayNormNeg, nextData.dayNormNeg, t);
             }
             else
             {
-                // Normal interpolation between consecutive points
-                var timeSpan = nextData.normalizedDate - beforeData.normalizedDate;
-                var currentTimeFromBefore = normalizedCurrentTime - beforeData.normalizedDate;
-                t = currentTimeFromBefore / timeSpan;
+                alphaPos = nextData.dayNormPos;
+                alphaNeu = nextData.dayNormNeu;
+                alphaNeg = nextData.dayNormNeg;
             }
-
-            // Use smoothstep for smoother interpolation
-            t = t * t * (3.0f - 2.0f * t);
-
-            // Interpolate alpha values
-            var alphaPos = Mathf.Lerp(beforeData.dayNormPos, nextData.dayNormPos, t);
-            var alphaNeu = Mathf.Lerp(beforeData.dayNormNeu, nextData.dayNormNeu, t);
-            var alphaNeg = Mathf.Lerp(beforeData.dayNormNeg, nextData.dayNormNeg, t);
-
-            // Register current data point with maelstrom manager
-            _maelstromManager.RegisterData(beforeData);
 
             UpdateCoralsAlpha(alphaPos, alphaNeu, alphaNeg);
         }
@@ -161,30 +149,14 @@ namespace Maelstrom.Unity
         {
             var localMaelstromValue = _maelstromManager.GetCurrentMaelstrom();
 
-            positive.GetComponent<Renderer>().material.SetFloat("_Opacity", alphaPos);
+            positive.GetComponent<Renderer>().material.SetFloat("_Opacity", alphaPos * (1 - localMaelstromValue));
             positive.GetComponent<Renderer>().material.SetFloat("_Maelstrom", localMaelstromValue);
 
-            neutral.GetComponent<Renderer>().material.SetFloat("_Opacity", alphaNeu);
+            neutral.GetComponent<Renderer>().material.SetFloat("_Opacity", alphaNeu * (1 - localMaelstromValue));
             neutral.GetComponent<Renderer>().material.SetFloat("_Maelstrom", localMaelstromValue);
 
-            negative.GetComponent<Renderer>().material.SetFloat("_Opacity", alphaNeg);
+            negative.GetComponent<Renderer>().material.SetFloat("_Opacity", (alphaNeg + localMaelstromValue) / 2);
             negative.GetComponent<Renderer>().material.SetFloat("_Maelstrom", localMaelstromValue);
-        }
-
-
-        public float GetCurrentTime()
-        {
-            return _currentTime;
-        }
-
-        public bool IsLooping()
-        {
-            return _isLooping;
-        }
-
-        public int GetCurrentDataIndex()
-        {
-            return _currentDataIndex;
         }
     }
 }

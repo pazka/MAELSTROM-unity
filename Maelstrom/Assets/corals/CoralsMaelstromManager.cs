@@ -39,9 +39,12 @@ namespace Maelstrom.Unity
         /// </summary>
         public void RegisterData(CoralDataPoint data)
         {
-            AppLogger.Log($"Date({data.date:yyyy-MM-dd})");
+            AppLogger.Log($"+:{data.dayNormPos:F2}, /:{data.dayNormNeu:F2}, -:{data.dayNormNeg:F2}");
+            NetworkManager.Instance.SendNetwork(DataTag.CurrentDataDate, new TextData(
+                CommonMaelstrom.RoleId.DeadComunities,
+                $"{data.normalizedDate:F2}({data.date:yyyy-MM-dd})"));
             if (!boundsRegistered) throw new SystemException("no bound to compare maelstrom");
-            currentMaelstrom = CommonMaelstrom.UpdateMaelstrom(data.neg / maxNegativeSentiment, 50f);
+            currentMaelstrom = CommonMaelstrom.UpdateMaelstrom(data.neg / maxNegativeSentiment);
 
             currentNegativeSentiment = data.neg;
         }

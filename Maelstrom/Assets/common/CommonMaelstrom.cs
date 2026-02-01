@@ -24,7 +24,7 @@ namespace Maelstrom.Unity
         private static float currentMaelstrom;
         private static float targetMaelstrom;
 
-        private static readonly Queue<float> maelstromHistory = new();
+        private static readonly Queue<float> targetMaelstromHistory = new();
 
         // Network Integration
         private static bool _isInitialized;
@@ -194,23 +194,23 @@ namespace Maelstrom.Unity
                 ? externalMaelstromsValues.Sum() / externalMaelstromsValues.Length
                 : 0f;
 
-            // Check if any previous maelstrom values were above 0.7
-            var hasHighPreviousValues = maelstromHistory.Any(value => value >= 0.6f);
+            // Check if any previous maelstrom values were above 0.6
+            var hasHighPreviousValues = targetMaelstromHistory.Any(value => value >= 0.6f);
             var closeToTarget = Math.Abs(targetMaelstrom - currentMaelstrom) < 0.002f;
 
             if (closeToTarget)
             {
                 netRnd = rnd.NextDouble();
-                AppLogger.Log($"netRnd({netRnd:F2}), ext:{externalMaestrom:F2}");
-                if (currentRatio > 0.3 && externalMaestrom > 0.5 && !hasHighPreviousValues)
+                // AppLogger.Log($"netRnd({netRnd:F2}), ");
+                if (currentRatio > 0.3 && externalMaestrom > 0.6 && !hasHighPreviousValues)
                 {
                     setTarget(1f);
-                    AppLogger.Log($"BIG Mal(ext : {externalMaestrom:F2} > 0.5) ");
+                    AppLogger.Log($"BIG Mal(ext : {externalMaestrom:F2} > 0.6) ");
                 }
                 else if (currentRatio > 0.3 && netRnd >= MEDIUM_MAELSTROM_THRESHOLD)
                 {
                     setTarget(0.7f);
-                    AppLogger.Log($"MID Mal({netRnd})");
+                    AppLogger.Log($"MID Mal({netRnd}), ratio : ({currentRatio:F2},ext:{externalMaestrom:F2})");
                 }
                 else
                 {
@@ -220,13 +220,13 @@ namespace Maelstrom.Unity
                 }
             }
 
-            // Use inertia only if previous values were above 0.7
+            // Use inertia only if previous values were above 0.6
             var lerpSpeed = (hasHighPreviousValues ? 0.001f : 0.01f) * speedModifier;
             currentMaelstrom = Mathf.Lerp(currentMaelstrom, targetMaelstrom, lerpSpeed);
 
             // Store current maelstrom in history (keep max 100 values)
-            maelstromHistory.Enqueue(targetMaelstrom);
-            if (maelstromHistory.Count > 100) maelstromHistory.Dequeue();
+            targetMaelstromHistory.Enqueue(targetMaelstrom);
+            if (targetMaelstromHistory.Count > 100) targetMaelstromHistory.Dequeue();
 
             BroadcastCurrentValues(currentRatio);
 

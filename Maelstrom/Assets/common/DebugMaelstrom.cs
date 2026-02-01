@@ -240,7 +240,7 @@ public class DebugMaelstrom : MonoBehaviour
         if (_logs.Count > _logsSize)
             _logs.RemoveAt(0);
 
-        if (logMesh != null && _updateCount == 0)
+        if (logMesh != null )
         {
             var sb = new StringBuilder();
             for (var i = _logs.Count - 1; i >= 0; i--)
