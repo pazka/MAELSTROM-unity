@@ -1,6 +1,5 @@
 using System;
 using UnityEngine;
-using Maelstrom.Unity;
 
 namespace Maelstrom.Unity
 {
@@ -34,7 +33,7 @@ namespace Maelstrom.Unity
             try
             {
                 osc = new OSC(10301, "127.0.0.1", 10300);
-                Debug.Log("Connected to Pure Data client !");
+                AppLogger.Log("Pure Data connexion opened !");
 
                 var oscMess = new OscMessage();
                 oscMess.address = "/Test";
@@ -45,7 +44,7 @@ namespace Maelstrom.Unity
             catch (Exception e)
             {
                 osc = null;
-                Debug.Log(e.Message);
+                AppLogger.Log(e.Message);
                 throw;
             }
         }
@@ -58,24 +57,24 @@ namespace Maelstrom.Unity
         public void Send(OscMessage message)
         {
             if (!IsOpen())
-                Debug.Log("Error when trying to send a message, the connection is not open")
+                AppLogger.Log("Error when trying to send a message, the connection is not open")
                     ;
             osc.Send(message);
         }
 
         public void SendOscMessage(string address, int value)
         {
-            Send(new OscMessage("/"+address, value));
+            Send(new OscMessage("/" + address, value));
         }
 
         public void SendOscMessage(string address, float value)
         {
-            Send(new OscMessage("/"+address, value));
+            Send(new OscMessage("/" + address, value));
         }
 
         public void SendOscMessage(string address, string value)
         {
-            Send(new OscMessage("/"+address, value));
+            Send(new OscMessage("/" + address, value));
         }
     }
 }

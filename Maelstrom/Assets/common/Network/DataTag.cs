@@ -10,6 +10,7 @@ namespace Maelstrom.Unity
         TargetMaelstromValue = 1,
 
         CurrentDataDate = 2,
-        Logs = 3
+        Logs = 3,
+        OverrideTargetMaelstrom = 4,
     }
 }

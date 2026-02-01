@@ -74,6 +74,8 @@ namespace Maelstrom.Unity
 
         private void Update()
         {
+            NetworkManager.Instance?.ProcessCallbacks();
+
             if (!dataLoader.IsDataLoaded) return;
 
             _currentTime += Time.deltaTime;
@@ -111,8 +113,6 @@ namespace Maelstrom.Unity
                 // Clean up all objects using the display object pool
                 if (displayObjectPool != null) displayObjectPool.ClearPool();
 
-                // Clean up UDP service
-                CommonMaelstrom.Cleanup();
 
                 AppLogger.Log($"[FEED_MAIN] Cleanup completed - Pool size: {displayObjectPool?.GetPoolSize() ?? 0}");
             }
@@ -200,18 +200,18 @@ namespace Maelstrom.Unity
         {
             var normalizedCurrentTime = _currentTime / loopDuration;
             AppLogger.Log($"Time: {_currentTime:F1}s, Normalized: {normalizedCurrentTime:F6}, " +
-                      $"Active Objects: {displayObjectPool.GetActiveObjectCount()}, Data Index: {_currentDataIndex}/{_data.Length}");
+                          $"Active Objects: {displayObjectPool.GetActiveObjectCount()}, Data Index: {_currentDataIndex}/{_data.Length}");
 
             // Log recycling stats
             AppLogger.Log($"Recycling Stats - Active: {displayObjectPool.GetActiveObjectCount()}, " +
-                      $"Inactive Queue: {displayObjectPool.GetInactiveObjectCount()}, " +
-                      $"Pool Size: {displayObjectPool.GetPoolSize()}");
+                          $"Inactive Queue: {displayObjectPool.GetInactiveObjectCount()}, " +
+                          $"Pool Size: {displayObjectPool.GetPoolSize()}");
 
             if (_currentDataIndex < _data.Length)
             {
                 var currentDataPoint = _data[_currentDataIndex];
                 AppLogger.Log($"  Next data point: {currentDataPoint.date:yyyy-MM-dd HH:mm:ss}, " +
-                          $"Retweets: {currentDataPoint.retweetCount}, Normalized: {currentDataPoint.normalizedDate:F6}");
+                              $"Retweets: {currentDataPoint.retweetCount}, Normalized: {currentDataPoint.normalizedDate:F6}");
             }
 
             // Log current date being displayed
@@ -220,8 +220,8 @@ namespace Maelstrom.Unity
 
             // Log maelstrom information
             AppLogger.Log($"  MAELSTROM: {maelstrom.GetCurrentMaelstrom():F3}, " +
-                      $"Current Day Retweets: {maelstrom.GetCurrentRetweetCount()}, " +
-                      $"Bounds: {maelstrom.GetMinRetweetCount()}-{maelstrom.GetMaxRetweetCount()}");
+                          $"Current Day Retweets: {maelstrom.GetCurrentRetweetCount()}, " +
+                          $"Bounds: {maelstrom.GetMinRetweetCount()}-{maelstrom.GetMaxRetweetCount()}");
         }
 
         // Public methods for external control

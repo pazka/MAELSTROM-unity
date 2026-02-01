@@ -4,6 +4,7 @@ using Maelstrom.Unity;
 using TMPro;
 using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class DebugMaelstrom : MonoBehaviour
 {
@@ -18,6 +19,9 @@ public class DebugMaelstrom : MonoBehaviour
 
     [SerializeField] private TextMeshProUGUI debugMesh;
     [SerializeField] private TextMeshProUGUI logMesh;
+    [SerializeField] private Slider sliderDeadComunities;
+    [SerializeField] private Slider sliderGhostNet;
+    [SerializeField] private Slider sliderFeed;
     private readonly Dictionary<CommonMaelstrom.RoleId, float> _lastValues = new();
 
     private readonly Dictionary<CommonMaelstrom.RoleId, LineRenderer> _lineRenderers = new();
@@ -61,10 +65,15 @@ public class DebugMaelstrom : MonoBehaviour
         ApplyCameraOrthoSize();
         ApplyDebugUILayout();
 
-        NetworkManager.Instance.Initialize(5000);
+        NetworkManager.Instance.Initialize(5000, new[] { 5001, 5002, 5003 });
         NetworkManager.Instance.ListenNetwork<FloatData>(DataTag.TargetMaelstromValue, UpdateTargetMaelstrom);
         NetworkManager.Instance.ListenNetwork<TextData>(DataTag.CurrentDataDate, UpdateCurrentDate);
         NetworkManager.Instance.ListenNetwork<TextData>(DataTag.Logs, UpdateLogs);
+
+        sliderDeadComunities?.onValueChanged.AddListener(value =>
+            OverrideMaelstrom(CommonMaelstrom.RoleId.DeadComunities, value));
+        sliderGhostNet?.onValueChanged.AddListener(value => OverrideMaelstrom(CommonMaelstrom.RoleId.GhostNet, value));
+        sliderFeed?.onValueChanged.AddListener(value => OverrideMaelstrom(CommonMaelstrom.RoleId.Feed, value));
     }
 
     private void Update()
@@ -96,6 +105,12 @@ public class DebugMaelstrom : MonoBehaviour
 
         if (_currentGraphPosition >= Screen.width)
             _currentGraphPosition = 0;
+    }
+
+    public void OverrideMaelstrom(CommonMaelstrom.RoleId role, float value)
+    {
+        NetworkManager.Instance.SendNetwork(DataTag.OverrideTargetMaelstrom,
+            new FloatData(role, value));
     }
 
     private void HandleScreenResize()
@@ -131,7 +146,8 @@ public class DebugMaelstrom : MonoBehaviour
             rt.anchorMax = new Vector2(1f, 1f);
             rt.pivot = new Vector2(1f, 1f);
             rt.anchoredPosition = new Vector2(-UiMargin, -UiMargin);
-            rt.sizeDelta = new Vector2(Screen.width * DebugPanelWidthFraction, Screen.height * DebugPanelHeightFraction);
+            rt.sizeDelta = new Vector2(Screen.width * DebugPanelWidthFraction,
+                Screen.height * DebugPanelHeightFraction);
             debugMesh.fontSize = fontSize;
         }
 

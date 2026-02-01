@@ -51,15 +51,12 @@ namespace Maelstrom.Unity
 
         private void Update()
         {
+            NetworkManager.Instance?.ProcessCallbacks();
+
             if (!dataLoader.IsDataLoaded) return;
 
             _currentTime += Time.deltaTime;
             ProcessDataAndUpdateCorals();
-        }
-
-        private void OnDestroy()
-        {
-            CommonMaelstrom.Cleanup();
         }
 
         private void InitializeData()

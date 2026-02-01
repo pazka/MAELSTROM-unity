@@ -20,8 +20,10 @@ namespace Maelstrom.Unity
         private static float HIGH_MAELSTROM_THRESHOLD = 0.99f;
         private static readonly float MEDIUM_MAELSTROM_THRESHOLD = 0.80f;
 
+
         private static float currentMaelstrom;
         private static float targetMaelstrom;
+
         private static readonly Queue<float> maelstromHistory = new();
 
         // Network Integration
@@ -29,16 +31,29 @@ namespace Maelstrom.Unity
         private static PureDataConnector _pureData;
 
         // Maelstrom-specific network state
-        private static readonly ConcurrentDictionary<RoleId, float> externalMaelstrom =
+        private static readonly ConcurrentDictionary<RoleId, float> externalMaelstroms =
             new();
 
-        private static float localMaelstrom;
         private static RoleId localRoleId; // 1=corals,2=ghostNet,3=feed
 
         private static int updateCount;
         private static double netRnd;
         public static string[] RoleKeys = { "debug", "deadComunities", "ghostNet", "feed" };
         public static RoleId[] RoleIds = { RoleId.Debug, RoleId.DeadComunities, RoleId.Feed, RoleId.GhostNet };
+
+        private static readonly Dictionary<RoleId, bool> overrides = new()
+        {
+            { RoleId.Debug, false },
+            { RoleId.DeadComunities, false },
+            { RoleId.GhostNet, false },
+            { RoleId.Feed, false }
+        };
+
+        private static void setTarget(float val)
+        {
+            if (!overrides[localRoleId]) targetMaelstrom = val;
+        }
+
 
         public static string RoleToKey(RoleId role)
         {
@@ -74,39 +89,13 @@ namespace Maelstrom.Unity
             _isInitialized = true;
 
             NetworkManager.Instance.ListenNetwork<FloatData>(DataTag.CurrentMaelstromValue,
-                HandleMaelstromDataReceived);
+                HandleExternalMaelstromDataReceived);
+            NetworkManager.Instance.ListenNetwork<FloatData>(DataTag.OverrideTargetMaelstrom,
+                HandleOverrideMaelstromReceived);
 
             AppLogger.Log($"Network service initialized for role: {roleId}");
         }
 
-        /// <summary>
-        ///     Cleanup network service resources
-        /// </summary>
-        public static void Cleanup()
-        {
-            if (_isInitialized)
-            {
-                try
-                {
-                    NetworkManager.Instance?.UnListenNetwork<FloatData>(DataTag.CurrentMaelstromValue,
-                        HandleMaelstromDataReceived);
-                }
-                catch
-                {
-                }
-
-                try
-                {
-                    NetworkManager.Instance?.Dispose();
-                }
-                catch
-                {
-                }
-
-                _isInitialized = false;
-                externalMaelstrom.Clear();
-            }
-        }
 
         /// <summary>
         ///     Returns external maelstrom values as array
@@ -115,7 +104,7 @@ namespace Maelstrom.Unity
         {
             if (!_isInitialized) return new float[] { };
 
-            var values = externalMaelstrom.Values;
+            var values = externalMaelstroms.Values;
             var result = new float[values.Count];
             var i = 0;
             foreach (var v in values) result[i++] = Clamp01(v);
@@ -127,14 +116,25 @@ namespace Maelstrom.Unity
         /// </summary>
         public static IReadOnlyDictionary<RoleId, float> GetAllMaelstroms()
         {
-            var allMaelstroms = new Dictionary<RoleId, float>(externalMaelstrom);
+            var allMaelstroms = new Dictionary<RoleId, float>(externalMaelstroms);
 
-            allMaelstroms[localRoleId] = localMaelstrom;
+            allMaelstroms[localRoleId] = currentMaelstrom;
 
             return allMaelstroms;
         }
 
-        private static void HandleMaelstromDataReceived(FloatData data)
+        private static void HandleOverrideMaelstromReceived(FloatData data)
+        {
+            if (data.Value > 0.01)
+                overrides[data.RoleId] = true;
+            else
+                overrides[data.RoleId] = false;
+
+            if (data.RoleId == localRoleId) targetMaelstrom = data.Value;
+            else externalMaelstroms[data.RoleId] = data.Value;
+        }
+
+        private static void HandleExternalMaelstromDataReceived(FloatData data)
         {
             if (data == null) return;
 
@@ -142,8 +142,7 @@ namespace Maelstrom.Unity
             {
                 if (data.RoleId == localRoleId) return;
 
-                var extVal = Clamp01(data.Value);
-                externalMaelstrom[data.RoleId] = extVal;
+                externalMaelstroms[data.RoleId] = data.Value;
             }
             catch (Exception ex)
             {
@@ -155,27 +154,42 @@ namespace Maelstrom.Unity
         {
             if (!_isInitialized || localRoleId == RoleId.Debug) return;
 
-            localMaelstrom = Clamp01(maelstrom);
-
             try
             {
                 NetworkManager.Instance.SendNetwork(DataTag.TargetMaelstromValue,
                     new FloatData(localRoleId, targetMaelstrom));
                 NetworkManager.Instance.SendNetwork(DataTag.CurrentMaelstromValue,
-                    new FloatData(localRoleId, localMaelstrom));
+                    new FloatData(localRoleId, currentMaelstrom));
             }
             catch (Exception ex)
             {
                 AppLogger.LogError($"Error publishing maelstrom: {ex.Message}");
             }
+
+            if (updateCount++ > 60) updateCount = 0;
+
+            try
+            {
+                if (updateCount == 0)
+                {
+                    var allMaelstroms = GetAllMaelstroms();
+                    if (_pureData)
+                        foreach (var kvp in allMaelstroms)
+                            _pureData.SendOscMessage(RoleToKey(kvp.Key), kvp.Value);
+                }
+            }
+            catch (Exception ex)
+            {
+                AppLogger.LogError($"Error send OSC DATA: {ex.Message}");
+            }
         }
 
-        public static float UpdateMaelstrom(float currentRatio, float speedModifier = 1.0f, bool isCoral = false)
+        public static float UpdateMaelstrom(float currentRatio, float speedModifier = 1.0f)
         {
             var rnd = new Random();
-            var externalMaelstroms = GetExternalMaelstroms();
-            var externalMaelstrom = externalMaelstroms.Length > 0
-                ? externalMaelstroms.Sum() / externalMaelstroms.Length
+            var externalMaelstromsValues = GetExternalMaelstroms();
+            var externalMaestrom = externalMaelstromsValues.Length > 0
+                ? externalMaelstromsValues.Sum() / externalMaelstromsValues.Length
                 : 0f;
 
             // Check if any previous maelstrom values were above 0.7
@@ -185,15 +199,22 @@ namespace Maelstrom.Unity
             if (closeToTarget)
             {
                 netRnd = rnd.NextDouble();
-                if (currentRatio > 0.3 && externalMaelstrom > 0.5 && !hasHighPreviousValues)
-                    targetMaelstrom = 1;
-                // AppLogger.Log($"BIG Mal({netRnd}) : {targetMaelstrom}/{currentMaelstrom}");
+                if (currentRatio > 0.3 && externalMaestrom > 0.5 && !hasHighPreviousValues)
+                {
+                    setTarget(1f);
+                    AppLogger.Log($"BIG Mal(ext : {externalMaestrom} > 0.5) ");
+                }
                 else if (currentRatio > 0.3 && netRnd >= MEDIUM_MAELSTROM_THRESHOLD)
-                    targetMaelstrom = 0.7f;
-                // AppLogger.Log($"MID Mal({netRnd}) : {targetMaelstrom}/{currentMaelstrom}");
+                {
+                    setTarget(0.7f);
+                    AppLogger.Log($"MID Mal({netRnd})");
+                }
                 else
-                    targetMaelstrom = Mathf.Lerp(currentMaelstrom, currentRatio, 0.1f);
-                //  AppLogger.Log($"Maelstrom Tgt/Crt : {currentRatio}, {targetMaelstrom}/{currentMaelstrom}, extValue : ({externalMaelstrom})");
+                {
+                    setTarget(Mathf.Lerp(currentMaelstrom, currentRatio, 0.1f));
+                    //  AppLogger.Log(
+                    //    $"Maelstrom Tgt/Crt : {currentRatio}, {targetMaelstrom}, extValue : ({externalMaestrom})");
+                }
             }
 
             // Use inertia only if previous values were above 0.7
@@ -204,44 +225,11 @@ namespace Maelstrom.Unity
             maelstromHistory.Enqueue(targetMaelstrom);
             if (maelstromHistory.Count > 100) maelstromHistory.Dequeue();
 
-            if (updateCount++ > 60) updateCount = 0;
-
             PublishCurrentMaelstrom(Clamp01(currentMaelstrom));
-
-            if (updateCount == 0)
-            {
-                var allMaelstroms = GetAllMaelstroms();
-                if (_pureData)
-                    foreach (var kvp in allMaelstroms)
-                        _pureData.SendOscMessage(RoleToKey(kvp.Key), kvp.Value);
-            }
-
-            try
-            {
-                NetworkManager.Instance?.ProcessCallbacks();
-            }
-            catch
-            {
-            }
-
 
             return currentMaelstrom;
         }
 
-        /// <summary>
-        ///     Process network callbacks on the main thread. Call this from Update if not using UpdateMaelstrom.
-        /// </summary>
-        public static void ProcessNetworkCallbacks()
-        {
-            if (_isInitialized)
-                try
-                {
-                    NetworkManager.Instance?.ProcessCallbacks();
-                }
-                catch
-                {
-                }
-        }
 
         private static float Clamp01(float v)
         {

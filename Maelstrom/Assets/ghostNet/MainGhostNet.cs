@@ -82,6 +82,7 @@ namespace Maelstrom.Unity
 
         private void Update()
         {
+            NetworkManager.Instance?.ProcessCallbacks();
             if (!dataLoader.IsDataLoaded) return;
 
             _currentTime += Time.deltaTime;
@@ -112,8 +113,6 @@ namespace Maelstrom.Unity
             // Clean up all objects using the static pool
             displayObjectPool.ClearPool();
 
-            // Clean up UDP service
-            CommonMaelstrom.Cleanup();
 
             AppLogger.Log($"[GHOSTNET_MAIN] Cleanup completed - Pool size: {displayObjectPool.GetPoolSize()}");
         }

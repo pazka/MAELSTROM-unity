@@ -19,7 +19,6 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using UnityEditor;
-using UnityEngine;
 
 namespace Maelstrom.Unity
 {
@@ -155,7 +154,7 @@ namespace Maelstrom.Unity
             // latest time for this socket to be closed
             if (IsOpen())
             {
-                Debug.Log("closing udpclient listener on port " + LocalPort);
+                AppLogger.Log("closing udpclient listener on port " + LocalPort);
                 Close();
             }
         }
@@ -175,7 +174,7 @@ namespace Maelstrom.Unity
                 }
 
                 Sender = new UdpClient();
-                Debug.Log("Opening OSC listener on port " + LocalPort);
+                AppLogger.Log("Opening OSC listener on port " + LocalPort);
 
                 var listenerIp = new IPEndPoint(IPAddress.Any, LocalPort);
 
@@ -193,8 +192,8 @@ namespace Maelstrom.Unity
             }
             catch (Exception e)
             {
-                Debug.LogError("cannot open udp client interface at port " + LocalPort);
-                Debug.LogError(e);
+                AppLogger.LogError("cannot open udp client interface at port " + LocalPort);
+                AppLogger.LogError(e.Message);
             }
 
             return false;
@@ -210,7 +209,7 @@ namespace Maelstrom.Unity
 
             if (Receiver != null)
                 Receiver.Close();
-            // Debug.Log("UDP receiver closed");
+            // AppLogger.Log("UDP receiver closed");
 
             Receiver = null;
             socketsOpen = false;
@@ -241,7 +240,7 @@ namespace Maelstrom.Unity
                 throw new SystemException("Pure Data connection not open");
 
             Sender.Send(packet, length, RemoteHostName, RemotePort);
-            //Debug.Log("osc message sent to "+remoteHostName+" port "+remotePort+" len="+length);
+            //AppLogger.Log("osc message sent to "+remoteHostName+" port "+remotePort+" len="+length);
         }
 
         /// <summary>
@@ -343,7 +342,7 @@ namespace Maelstrom.Unity
                 return data;
             }
 
-            Debug.Log("Wrong type");
+            AppLogger.Log("Wrong type");
             return 0;
         }
 
@@ -363,7 +362,7 @@ namespace Maelstrom.Unity
                 return data;
             }
 
-            Debug.Log("Wrong type");
+            AppLogger.Log("Wrong type");
             return 0f;
         }
     }
@@ -488,7 +487,7 @@ namespace Maelstrom.Unity
         public void Update()
         {
             if (messagesReceived.Count > 0)
-                //Debug.Log("received " + messagesReceived.Count + " messages");
+                //AppLogger.Log("received " + messagesReceived.Count + " messages");
                 lock (ReadThreadLock)
                 {
                     foreach (OscMessage om in messagesReceived)
@@ -514,12 +513,12 @@ namespace Maelstrom.Unity
     ~OSC()
     {
         Cancel();
-        //Debug.LogError("~Osc");
+        //AppLogger.LogError("~Osc");
     }
     */
         public void Close()
         {
-            //Debug.Log("Osc Cancel start");
+            //AppLogger.Log("Osc Cancel start");
 
 
             if (ReaderRunning)
@@ -532,7 +531,7 @@ namespace Maelstrom.Unity
             {
                 OscPacketIO.Close();
                 OscPacketIO = null;
-                Debug.Log("Closed OSC listener");
+                AppLogger.Log("Closed OSC listener");
             }
         }
 
@@ -566,7 +565,7 @@ namespace Maelstrom.Unity
 
             catch (Exception e)
             {
-                Debug.Log("ThreadAbortException" + e);
+                AppLogger.Log("ThreadAbortException" + e);
             }
         }
 
@@ -614,7 +613,7 @@ namespace Maelstrom.Unity
         public static OscMessage StringToOscMessage(string message)
         {
             var oM = new OscMessage();
-            Debug.Log("Splitting " + message);
+            AppLogger.Log("Splitting " + message);
             var ss = message.Split(' ');
             var sE = ss.GetEnumerator();
             if (sE.MoveNext())

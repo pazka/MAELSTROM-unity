@@ -2,7 +2,6 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Reflection;
-using UnityEngine;
 
 namespace Maelstrom.Unity
 {
@@ -17,8 +16,8 @@ namespace Maelstrom.Unity
         private readonly object _callbackLock = new();
         private readonly ConcurrentDictionary<DataTag, List<Delegate>> _callbacks = new();
         private readonly ConcurrentQueue<Action> _pendingCallbacks = new();
-        private IUdpService _udpService;
         private byte[] _lastLogsPayload;
+        private IUdpService _udpService;
 
         private NetworkManager()
         {
@@ -62,7 +61,8 @@ namespace Maelstrom.Unity
         {
             if (a == null || b == null || a.Length != b.Length) return false;
             for (var i = 0; i < a.Length; i++)
-                if (a[i] != b[i]) return false;
+                if (a[i] != b[i])
+                    return false;
             return true;
         }
 
