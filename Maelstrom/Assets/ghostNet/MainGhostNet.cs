@@ -27,7 +27,7 @@ namespace Maelstrom.Unity
 
         // Frame rate limiting for spawning
         [Header("Performance Settings")] [SerializeField]
-        private int maxObjectsPerFrame = 50; // Limit objects spawned per frame
+        private int maxObjectsPerFrame = 1000; // Limit objects spawned per frame
 
         [SerializeField] private int maxObjectsPerSecond = 1000; // Limit objects spawned per second
 
@@ -59,6 +59,7 @@ namespace Maelstrom.Unity
 
         private void Start()
         {
+            Application.runInBackground = true;
             if (SceneManager.GetActiveScene().name != "GhostNetsScene")
             {
                 gameObject.SetActive(false);
@@ -99,6 +100,11 @@ namespace Maelstrom.Unity
 
             // Process data and manage display objects
             ProcessDataAndManageObjects();
+
+            NetworkManager.Instance?.SendNetwork(DataTag.CurrentDataDate,
+                new TextData(CommonMaelstrom.RoleId.GhostNet,
+                    $" Data({_dataIndex}/{_data.Length})=>{_dayProgress:F2}/{_currentTime % loopDuration / loopDuration:F2}({_currentDisplayedDate:yyyy-MM-dd HH:mm:ss})")
+            );
 
             // Debug output
             if (showDebugInfo && _currentTime - _lastDebugTime >= debugUpdateInterval)
@@ -299,11 +305,11 @@ namespace Maelstrom.Unity
             // Log warnings if we hit performance limits
             if (_objectsSpawnedThisFrame >= maxObjectsPerFrame)
                 AppLogger.LogWarning($"Performance: Hit frame limit ({maxObjectsPerFrame} objects/frame). " +
-                                 $"Remaining data points: {targetSpawnedCount - _currentDayDataIndex}");
+                                     $"Remaining data points: {targetSpawnedCount - _currentDayDataIndex}");
 
             if (_objectsSpawnedThisSecond >= maxObjectsPerSecond)
                 AppLogger.LogWarning($"Performance: Hit second limit ({maxObjectsPerSecond} objects/second). " +
-                                 $"Remaining data points: {targetSpawnedCount - _currentDayDataIndex}");
+                                     $"Remaining data points: {targetSpawnedCount - _currentDayDataIndex}");
         }
 
         private int GetDataIndexForDate(DateTime date)
@@ -318,59 +324,30 @@ namespace Maelstrom.Unity
 
         private void LogDebugInfo()
         {
-            var normalizedCurrentTime = _currentTime % loopDuration / loopDuration;
-            AppLogger.Log($"Time: {_currentTime:F1}s, Normalized: {normalizedCurrentTime:F6}, " +
-                      $"Active Objects: {displayObjectPool.GetActiveObjectCount()}, " +
-                      $"Current Day: {_currentDay:yyyy-MM-dd}, Day Progress: {_dayProgress:F2}, " +
-                      $"Data Index: {_dataIndex}/{_data.Length}");
-
             // Log recycling stats
             AppLogger.Log($"Recycling Stats - Active: {displayObjectPool.GetActiveObjectCount()}, " +
-                      $"Inactive Queue: {displayObjectPool.GetInactiveObjectCount()}, " +
-                      $"Pool Size: {displayObjectPool.GetPoolSize()}");
+                          $"Inactive Queue: {displayObjectPool.GetInactiveObjectCount()}, " +
+                          $"Pool Size: {displayObjectPool.GetPoolSize()}");
 
             // Log performance metrics
             AppLogger.Log($"Performance - Objects/Frame: {_objectsSpawnedThisFrame}/{maxObjectsPerFrame}, " +
-                      $"Objects/Second: {_objectsSpawnedThisSecond}/{maxObjectsPerSecond}");
+                          $"Objects/Second: {_objectsSpawnedThisSecond}/{maxObjectsPerSecond}");
 
-            // Log current day data progression
-            if (_currentDayData.Count > 0)
-            {
-                AppLogger.Log($"  Current Day Data: {_currentDayDataIndex}/{_currentDayData.Count} spawned, " +
-                          $"Target: {Mathf.RoundToInt(_dayProgress * _currentDayData.Count)}");
-
-                if (_currentDayDataIndex < _currentDayData.Count)
-                {
-                    var nextDataPoint = _currentDayData[_currentDayDataIndex];
-                    AppLogger.Log($"  Next data point: {nextDataPoint.date:yyyy-MM-dd HH:mm:ss}, " +
-                              $"Tweets: {nextDataPoint.nb_tweets}, Followers: {nextDataPoint.followers_count}");
-                }
-            }
+            // // Log current day data progression
+            // if (_currentDayData.Count > 0)
+            // {
+            //     AppLogger.Log($"  Current Day Data: {_currentDayDataIndex}/{_currentDayData.Count} spawned, " +
+            //                   $"Target: {Mathf.RoundToInt(_dayProgress * _currentDayData.Count)}");
+            //
+            //     if (_currentDayDataIndex < _currentDayData.Count)
+            //     {
+            //         var nextDataPoint = _currentDayData[_currentDayDataIndex];
+            //         AppLogger.Log($"  Next data point: {nextDataPoint.date:yyyy-MM-dd HH:mm:ss}, " +
+            //                       $"Tweets: {nextDataPoint.nb_tweets}, Followers: {nextDataPoint.followers_count}");
+            //     }
+            // }
 
             // Log current date being displayed
-            if (displayObjectPool.GetActiveObjectCount() > 0)
-                AppLogger.Log($"  CURRENT DATE DISPLAYED: {_currentDisplayedDate:yyyy-MM-dd HH:mm:ss}");
-        }
-
-        // Public methods for external control
-        public void SetScreenSize(Vector2 newScreenSize)
-        {
-            screenSize = newScreenSize;
-        }
-
-        public float GetCurrentTime()
-        {
-            return _currentTime;
-        }
-
-        public DateTime GetCurrentDisplayedDate()
-        {
-            return _currentDisplayedDate;
-        }
-
-        public int GetCurrentDataIndex()
-        {
-            return _dataIndex;
         }
     }
 }

@@ -53,6 +53,8 @@ namespace Maelstrom.Unity
             if (tmpAccountCount > maxAccountCount) maxAccountCount = tmpAccountCount;
 
             boundsRegistered = true;
+            AppLogger.Log(
+                $"GhostNet Maelstrom bounds registered - Min accounts: {minAccountCount}, Max accounts: {maxAccountCount}");
         }
 
         /// <summary>
@@ -67,17 +69,21 @@ namespace Maelstrom.Unity
 
             if (isNewDay)
             {
+                AppLogger.Log($"Account tweeting:{currentAccountCount}/{maxAccountCount}");
                 this.currentDate = currentDate;
                 currentAccountCount = 0;
             }
+
+            if (!data.isAggregated) currentAccountCount += 1;
 
             var normalizedAccountCount = currentAccountCount / (float)maxAccountCount;
             if (normalizedAccountCount < 0.7f)
                 normalizedAccountCount = normalizedAccountCount * (normalizedAccountCount / 0.1f * 3f);
 
-            currentMaelstrom = CommonMaelstrom.UpdateMaelstrom(normalizedAccountCount, rnd.NextDouble());
-
-            if (!data.isAggregated) currentAccountCount += 1;
+            if (isNewDay)
+                currentMaelstrom = CommonMaelstrom.UpdateMaelstrom(normalizedAccountCount, rnd.NextDouble());
+            else
+                currentMaelstrom = CommonMaelstrom.UpdateMaelstrom(normalizedAccountCount);
         }
 
         /// <summary>

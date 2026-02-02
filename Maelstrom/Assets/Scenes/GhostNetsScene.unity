@@ -5345,7 +5345,7 @@ MonoBehaviour:
   dataLoader: {fileID: 17843114}
   showDebugInfo: 1
   debugUpdateInterval: 5
-  maxObjectsPerFrame: 50
+  maxObjectsPerFrame: 1000
   maxObjectsPerSecond: 1000
   pureDataConnector: {fileID: 1567655192}
 --- !u!4 &1567655191
