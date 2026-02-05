@@ -64,26 +64,27 @@ namespace Maelstrom.Unity
         {
             if (!boundsRegistered) throw new SystemException("no bound to compare maelstrom");
 
-            var currentDate = data.date.Date;
-            var isNewDay = currentDate != this.currentDate;
+            var newDate = data.date.Date;
+            var isNewDay = newDate != currentDate;
+
+            //aggregated data is processed by particle system
+            if (!data.isAggregated) currentAccountCount += 1;
+
+            var normalizedAccountCount = currentAccountCount / (float)maxAccountCount;
 
             if (isNewDay)
             {
                 AppLogger.Log($"Account tweeting:{currentAccountCount}/{maxAccountCount}");
-                this.currentDate = currentDate;
+                currentMaelstrom = CommonMaelstrom.UpdateMaelstrom(normalizedAccountCount, rnd.NextDouble());
+
+                currentDate = newDate;
                 currentAccountCount = 0;
             }
+        }
 
-            if (!data.isAggregated) currentAccountCount += 1;
-
-            var normalizedAccountCount = currentAccountCount / (float)maxAccountCount;
-            if (normalizedAccountCount < 0.7f)
-                normalizedAccountCount = normalizedAccountCount * (normalizedAccountCount / 0.1f * 3f);
-
-            if (isNewDay)
-                currentMaelstrom = CommonMaelstrom.UpdateMaelstrom(normalizedAccountCount, rnd.NextDouble());
-            else
-                currentMaelstrom = CommonMaelstrom.UpdateMaelstrom(normalizedAccountCount);
+        public void Update()
+        {
+            currentMaelstrom = CommonMaelstrom.ProgressMaelstrom();
         }
 
         /// <summary>
@@ -92,22 +93,6 @@ namespace Maelstrom.Unity
         public float GetCurrentMaelstrom()
         {
             return currentMaelstrom;
-        }
-
-        /// <summary>
-        ///     Get the current account count for the day
-        /// </summary>
-        public int GetCurrentAccountCount()
-        {
-            return currentAccountCount;
-        }
-
-        /// <summary>
-        ///     Check if bounds have been registered
-        /// </summary>
-        public bool IsBoundsRegistered()
-        {
-            return boundsRegistered;
         }
 
         /// <summary>
@@ -139,6 +124,7 @@ namespace Maelstrom.Unity
                     simulationMaelstrom.RegisterData(dataPoint);
 
                     // Store the maelstrom value after processing this data point
+                    for (var i = 0; i < 1000; i++) simulationMaelstrom.Update();
                     maelstromResults.Add((
                         dataPoint.date,
                         dataPoint.nb_accounts_others,

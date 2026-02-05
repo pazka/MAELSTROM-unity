@@ -1,62 +1,81 @@
 using System.Collections.Generic;
 using UnityEngine;
-using System;
 
 namespace Maelstrom.Unity
 {
     /// <summary>
-    /// Display object pool for managing GhostNetDisplayObject instances
+    ///     Display object pool for managing GhostNetDisplayObject instances
     /// </summary>
     public class GhostNetDisplayObjectPool : MonoBehaviour
     {
-        [Header("Pool Settings")]
-        [SerializeField] private int initialPoolSize = 5000; // Reduced from 50000
+        [Header("Pool Settings")] [SerializeField]
+        private int initialPoolSize = 5000; // Reduced from 50000
+
         [SerializeField] private int maxActiveObjects = 10000; // Reduced from 100000
         [SerializeField] private int maxPoolSize = 15000; // Reduced from 100000
-        [SerializeField] private GhostNetPointPool ghostNetPointPool; // Reference to the point pool for creating new objects
 
-        private List<GhostNetDisplayObject> _activeObjects = new List<GhostNetDisplayObject>();
-        private Queue<GhostNetDisplayObject> _inactiveObjects = new Queue<GhostNetDisplayObject>();
-        private bool _isInitialized = false;
+        [SerializeField]
+        private GhostNetPointPool ghostNetPointPool; // Reference to the point pool for creating new objects
+
+        private List<GhostNetDisplayObject> _activeObjects = new();
+        private readonly Queue<GhostNetDisplayObject> _inactiveObjects = new();
+        private Vector2 centerPosition = new(0f, 100f); // Default center position
 
         private Vector2 screenSize;
-        private Vector2 centerPosition = new Vector2(0f, 100f); // Default center position
+
         /// <summary>
-        /// Initialize the display object pool
+        ///     Check if the pool is initialized
+        /// </summary>
+        public bool IsInitialized { get; private set; }
+
+        /// <summary>
+        ///     Get the maximum number of active objects
+        /// </summary>
+        public int MaxActiveObjects => maxActiveObjects;
+
+        /// <summary>
+        ///     Get the maximum pool size
+        /// </summary>
+        public int MaxPoolSize => maxPoolSize;
+
+        /// <summary>
+        ///     Initialize the display object pool
         /// </summary>
         public void Initialize(Vector2 screenSize)
         {
             this.screenSize = screenSize;
 
-            if (_isInitialized)
+            if (IsInitialized)
             {
                 AppLogger.LogWarning("DisplayObjectPool already initialized");
                 return;
             }
 
-            if (this.ghostNetPointPool == null)
+            if (ghostNetPointPool == null)
             {
                 AppLogger.LogError("GhostNetPointPool is null");
                 return;
             }
 
-            for (int i = 0; i < initialPoolSize; i++)
+            _activeObjects = new List<GhostNetDisplayObject>(maxActiveObjects);
+
+            for (var i = 0; i < initialPoolSize; i++)
             {
-                GameObject prefab = ghostNetPointPool.GetOne();
+                var prefab = ghostNetPointPool.GetOne();
                 if (prefab != null)
                 {
-                    GhostNetDisplayObject displayObject = new GhostNetDisplayObject(prefab);
+                    var displayObject = new GhostNetDisplayObject(prefab);
                     displayObject.SetEnabled(false); // Start inactive
                     _inactiveObjects.Enqueue(displayObject);
                 }
             }
 
-            _isInitialized = true;
+            IsInitialized = true;
             AppLogger.Log($"DisplayObjectPool initialized with {_inactiveObjects.Count} objects");
         }
 
         /// <summary>
-        /// Set the center position for display objects
+        ///     Set the center position for display objects
         /// </summary>
         public void SetCenterPosition(Vector2 centerPos)
         {
@@ -65,7 +84,7 @@ namespace Maelstrom.Unity
         }
 
         /// <summary>
-        /// Create more objects for the pool when needed
+        ///     Create more objects for the pool when needed
         /// </summary>
         private bool CreateMoreObjects()
         {
@@ -75,7 +94,7 @@ namespace Maelstrom.Unity
                 return false;
             }
 
-            int currentPoolSize = _activeObjects.Count + _inactiveObjects.Count;
+            var currentPoolSize = _activeObjects.Count + _inactiveObjects.Count;
 
             // Check if we've reached the maximum pool size
             if (currentPoolSize >= maxPoolSize)
@@ -84,15 +103,15 @@ namespace Maelstrom.Unity
                 return false;
             }
 
-            int objectsToCreate = maxPoolSize - currentPoolSize;
-            int createdCount = 0;
+            var objectsToCreate = maxPoolSize - currentPoolSize;
+            var createdCount = 0;
 
-            for (int i = 0; i < objectsToCreate; i++)
+            for (var i = 0; i < objectsToCreate; i++)
             {
-                GameObject prefab = ghostNetPointPool.GetOne();
+                var prefab = ghostNetPointPool.GetOne();
                 if (prefab != null)
                 {
-                    GhostNetDisplayObject displayObject = new GhostNetDisplayObject(prefab);
+                    var displayObject = new GhostNetDisplayObject(prefab);
                     displayObject.SetEnabled(false); // Start inactive
                     _inactiveObjects.Enqueue(displayObject);
                     createdCount++;
@@ -105,19 +124,17 @@ namespace Maelstrom.Unity
             }
 
             if (createdCount > 0)
-            {
                 AppLogger.Log($"Created {createdCount} new objects, total pool size: {currentPoolSize + createdCount}");
-            }
 
             return createdCount > 0;
         }
 
         /// <summary>
-        /// Get a recycled display object from the pool
+        ///     Get a recycled display object from the pool
         /// </summary>
         public GhostNetDisplayObject GetRecycledDisplayObject()
         {
-            if (!_isInitialized)
+            if (!IsInitialized)
             {
                 AppLogger.LogError("DisplayObjectPool not initialized");
                 return null;
@@ -132,17 +149,14 @@ namespace Maelstrom.Unity
             }
             else
             {
-                AppLogger.Log($"no inactive object left : {_inactiveObjects.Count}, active objects : {_activeObjects.Count}");
+                AppLogger.Log(
+                    $"no inactive object left : {_inactiveObjects.Count}, active objects : {_activeObjects.Count}");
 
                 // If no inactive objects, try to create more objects
                 if (CreateMoreObjects())
-                {
                     // Try to get from the newly created inactive objects
                     if (_inactiveObjects.Count > 0)
-                    {
                         displayObject = _inactiveObjects.Dequeue();
-                    }
-                }
             }
 
             if (displayObject == null)
@@ -155,11 +169,11 @@ namespace Maelstrom.Unity
         }
 
         /// <summary>
-        /// Activate display objects for a data point (handles the full activation logic)
+        ///     Activate display objects for a data point (handles the full activation logic)
         /// </summary>
         public void ActivateDataPoint(GhostNetDataPoint dataPoint, float normalizedCreationtime, float currentMaelstrom)
         {
-            if (!_isInitialized)
+            if (!IsInitialized)
             {
                 AppLogger.LogError("DisplayObjectPool not initialized");
                 return;
@@ -180,7 +194,7 @@ namespace Maelstrom.Unity
                 return;
             }
 
-            GhostNetDisplayObject displayObject = GetRecycledDisplayObject();
+            var displayObject = GetRecycledDisplayObject();
             if (displayObject == null)
             {
                 AppLogger.LogError("No available display objects in pool");
@@ -188,13 +202,14 @@ namespace Maelstrom.Unity
             }
 
             // Let the display object handle its own initialization based on data point
-            displayObject.InitializeFromDataPoint(dataPoint, screenSize, normalizedCreationtime, currentMaelstrom, centerPosition);
+            displayObject.InitializeFromDataPoint(dataPoint, screenSize, normalizedCreationtime, currentMaelstrom,
+                centerPosition);
             displayObject.SetEnabled(true);
             _activeObjects.Add(displayObject);
         }
 
         /// <summary>
-        /// Recycle a display object back to the pool
+        ///     Recycle a display object back to the pool
         /// </summary>
         public void RecycleDisplayObject(GhostNetDisplayObject displayObject)
         {
@@ -208,52 +223,49 @@ namespace Maelstrom.Unity
         }
 
         /// <summary>
-        /// Recycle old objects that exceed the display duration
+        ///     Recycle old objects that exceed the display duration
         /// </summary>
         public void RecycleOldObjects(float normalizedCurrentTime, float normalizedDisplayDuration)
         {
-            int recycledCount = 0;
-            
-            // Iterate backwards through the list to safely remove items
-            for (int i = _activeObjects.Count - 1; i >= 0; i--)
+            var i = 0;
+            while (i < _activeObjects.Count)
             {
-                GhostNetDisplayObject obj = _activeObjects[i];
-                if (obj == null) continue;
-                
-                float objectAge = normalizedCurrentTime - obj.normalizedCreationTime;
+                var obj = _activeObjects[i];
+                if (obj == null)
+                {
+                    i++;
+                    continue;
+                }
 
-                // Handle loop transitions - if object age is negative or very large, 
-                // it means we've looped and this object is from a previous loop
+                var objectAge = normalizedCurrentTime - obj.normalizedCreationTime;
+
                 if (objectAge < 0 || objectAge > 1.0f || objectAge >= normalizedDisplayDuration)
                 {
-                    _activeObjects.RemoveAt(i);
+                    // O(1) swap-and-remove-last instead of O(n) RemoveAt
+                    var lastIndex = _activeObjects.Count - 1;
+                    _activeObjects[i] = _activeObjects[lastIndex];
+                    _activeObjects.RemoveAt(lastIndex);
                     RecycleDisplayObject(obj);
-                    recycledCount++;
                 }
-            }
-            
-            if (recycledCount > 0)
-            {
-//                AppLogger.Log($"Recycled {recycledCount} old objects. Active: {_activeObjects.Count}, Inactive: {_inactiveObjects.Count}");
+                else
+                {
+                    i++;
+                }
             }
         }
 
         /// <summary>
-        /// Update all active display objects
+        ///     Update all active display objects
         /// </summary>
         public void UpdateActiveObjects(float maelstrom)
         {
             foreach (var obj in _activeObjects)
-            {
                 if (obj != null)
-                {
                     obj.Update(Time.deltaTime, maelstrom);
-                }
-            }
         }
 
         /// <summary>
-        /// Get all active objects for external iteration
+        ///     Get all active objects for external iteration
         /// </summary>
         public List<GhostNetDisplayObject> GetActiveObjects()
         {
@@ -261,7 +273,7 @@ namespace Maelstrom.Unity
         }
 
         /// <summary>
-        /// Get the count of active objects
+        ///     Get the count of active objects
         /// </summary>
         public int GetActiveObjectCount()
         {
@@ -269,7 +281,7 @@ namespace Maelstrom.Unity
         }
 
         /// <summary>
-        /// Get the count of inactive objects
+        ///     Get the count of inactive objects
         /// </summary>
         public int GetInactiveObjectCount()
         {
@@ -277,7 +289,7 @@ namespace Maelstrom.Unity
         }
 
         /// <summary>
-        /// Get the total pool size
+        ///     Get the total pool size
         /// </summary>
         public int GetPoolSize()
         {
@@ -285,68 +297,50 @@ namespace Maelstrom.Unity
         }
 
         /// <summary>
-        /// Clear all objects and reset the pool
+        ///     Clear all objects and reset the pool
         /// </summary>
         public void ClearPool()
         {
             // Clean up all active objects
-            for (int i = _activeObjects.Count - 1; i >= 0; i--)
+            for (var i = _activeObjects.Count - 1; i >= 0; i--)
             {
-                GhostNetDisplayObject obj = _activeObjects[i];
-                if (obj != null)
-                {
-                    obj.SetEnabled(false);
-                }
+                var obj = _activeObjects[i];
+                if (obj != null) obj.SetEnabled(false);
             }
+
             _activeObjects.Clear();
 
             // Clean up inactive objects
             while (_inactiveObjects.Count > 0)
             {
-                GhostNetDisplayObject obj = _inactiveObjects.Dequeue();
-                if (obj != null)
-                {
-                    obj.SetEnabled(false);
-                }
+                var obj = _inactiveObjects.Dequeue();
+                if (obj != null) obj.SetEnabled(false);
             }
 
-            _isInitialized = false;
+            IsInitialized = false;
             ghostNetPointPool = null; // Clear the reference
 
             AppLogger.Log("DisplayObjectPool cleared and reset");
         }
 
         /// <summary>
-        /// Clear all active objects and move them back to inactive queue
+        ///     Clear all active objects and move them back to inactive queue
         /// </summary>
         public void ClearAllActiveObjects()
         {
-            for (int i = _activeObjects.Count - 1; i >= 0; i--)
+            for (var i = _activeObjects.Count - 1; i >= 0; i--)
             {
-                GhostNetDisplayObject obj = _activeObjects[i];
+                var obj = _activeObjects[i];
                 if (obj != null)
                 {
                     obj.SetEnabled(false);
                     _inactiveObjects.Enqueue(obj);
                 }
             }
+
             _activeObjects.Clear();
-            AppLogger.Log($"Cleared all active objects. Active: {_activeObjects.Count}, Inactive: {_inactiveObjects.Count}");
+            AppLogger.Log(
+                $"Cleared all active objects. Active: {_activeObjects.Count}, Inactive: {_inactiveObjects.Count}");
         }
-
-        /// <summary>
-        /// Check if the pool is initialized
-        /// </summary>
-        public bool IsInitialized => _isInitialized;
-
-        /// <summary>
-        /// Get the maximum number of active objects
-        /// </summary>
-        public int MaxActiveObjects => maxActiveObjects;
-
-        /// <summary>
-        /// Get the maximum pool size
-        /// </summary>
-        public int MaxPoolSize => maxPoolSize;
     }
 }

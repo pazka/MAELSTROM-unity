@@ -77,11 +77,11 @@ namespace Maelstrom.Unity
                 currentDate = newDate;
                 currentRetweetCount = 0;
             }
-            else
-            {
-                currentRetweetCount += data.retweetCount;
-                currentMaelstrom = CommonMaelstrom.UpdateMaelstrom(currentRetweetCount / (float)maxRetweetCount);
-            }
+        }
+
+        public void Update()
+        {
+            currentMaelstrom = CommonMaelstrom.ProgressMaelstrom();
         }
 
         /// <summary>
@@ -152,6 +152,7 @@ namespace Maelstrom.Unity
                 {
                     simulationMaelstrom.RegisterData(dataPoint);
 
+                    for (var i = 0; i < 1000; i++) simulationMaelstrom.Update();
                     // Store the maelstrom value after processing this data point
                     maelstromResults.Add((
                         dataPoint.date,

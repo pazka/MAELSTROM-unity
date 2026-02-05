@@ -7,6 +7,10 @@ namespace Maelstrom.Unity
     /// </summary>
     public static class GhostNetParticleManager
     {
+        private static Gradient _cachedGradient;
+        private static GradientColorKey[] _cachedColorKeys;
+        private static GradientAlphaKey[] _cachedAlphaKeys;
+
         /// <summary>
         /// Handle particle emission for ##OTHERS## datapoints
         /// </summary>
@@ -66,20 +70,25 @@ namespace Maelstrom.Unity
         /// <param name="currentMaelstrom">Current maelstrom value for color calculation</param>
         public static void SetParticleColor(ParticleSystem particles, float currentMaelstrom)
         {
-            var colorOverLifetime = particles.colorOverLifetime;
-            colorOverLifetime.enabled = true;
-            Gradient gradient = new Gradient();
-            gradient.SetKeys(
-                new GradientColorKey[] { 
-                    new GradientColorKey(new Color(1 - currentMaelstrom, 1 - currentMaelstrom, 1), 0.0f),
-                    new GradientColorKey(new Color(1 - currentMaelstrom, 1 - currentMaelstrom, 1), 1.0f)
-                },
-                new GradientAlphaKey[] { 
+            if (_cachedGradient == null)
+            {
+                _cachedGradient = new Gradient();
+                _cachedColorKeys = new GradientColorKey[2];
+                _cachedAlphaKeys = new GradientAlphaKey[]
+                {
                     new GradientAlphaKey(1.0f, 0.0f),
                     new GradientAlphaKey(0.0f, 1.0f)
-                }
-            );
-            colorOverLifetime.color = gradient;
+                };
+            }
+
+            var c = new Color(1 - currentMaelstrom, 1 - currentMaelstrom, 1);
+            _cachedColorKeys[0] = new GradientColorKey(c, 0.0f);
+            _cachedColorKeys[1] = new GradientColorKey(c, 1.0f);
+            _cachedGradient.SetKeys(_cachedColorKeys, _cachedAlphaKeys);
+
+            var colorOverLifetime = particles.colorOverLifetime;
+            colorOverLifetime.enabled = true;
+            colorOverLifetime.color = _cachedGradient;
         }
 
         /// <summary>

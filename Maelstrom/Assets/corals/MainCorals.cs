@@ -67,7 +67,7 @@ namespace Maelstrom.Unity
             _maelstromManager.RegisterDataBounds(_data);
 
             // Simulate and dump maelstrom data to CSV
-            _maelstromManager.SimulateAndDumpDailyMaelstrom(_data);
+            // _maelstromManager.SimulateAndDumpDailyMaelstrom(_data);
 
             AppLogger.Log($"Initialized corals with {_data.Length} data points");
         }
@@ -124,7 +124,7 @@ namespace Maelstrom.Unity
             var nextData = _data[nextIndex];
             if (_lastDisplayedDataIndex != nextIndex) _maelstromManager.RegisterData(nextData);
             else
-                _maelstromManager.UpdateMaelstrom();
+                _maelstromManager.Update();
             _lastDisplayedDataIndex = nextIndex;
 
             float alphaPos, alphaNeu, alphaNeg;

@@ -32,13 +32,14 @@ namespace Maelstrom.Unity
         [SerializeField] private int maxObjectsPerSecond = 1000; // Limit objects spawned per second
 
         [SerializeField] private PureDataConnector pureDataConnector;
-        private readonly List<GhostNetDataPoint> _currentDayData = new();
         private readonly TimeSpan DATA_TTL = TimeSpan.FromDays(3);
         private readonly GNMaelstromManager maelstrom = new();
 
         // Day progression tracking for smooth spawning
         private DateTime _currentDay = DateTime.MinValue;
+        private int _currentDayCount;
         private int _currentDayDataIndex;
+        private int _currentDayStartIndex;
 
         private DateTime _currentDisplayedDate = DateTime.MinValue;
 
@@ -48,6 +49,7 @@ namespace Maelstrom.Unity
         // Data management
         private GhostNetDataPoint[] _data;
         private int _dataIndex; // Track current position in data for looping
+        private Dictionary<DateTime, (int startIndex, int count)> _dayIndex;
         private float _dayProgress; // 0 to 1, progress through current day
         private float _lastDebugTime;
         private float _lastSecondReset;
@@ -100,6 +102,7 @@ namespace Maelstrom.Unity
 
             // Process data and manage display objects
             ProcessDataAndManageObjects();
+            maelstrom.Update();
 
             NetworkManager.Instance?.SendNetwork(DataTag.CurrentDataDate,
                 new TextData(CommonMaelstrom.RoleId.GhostNet,
@@ -128,9 +131,10 @@ namespace Maelstrom.Unity
             maelstrom.RegisterDataBounds(dataLoader.Data);
             _data = dataLoader.Data;
             _normalizedDisplayDuration = dataLoader.GetNormalizedDuration(DATA_TTL);
+            BuildDayIndex();
 
             // Simulate and dump maelstrom data to CSV
-            maelstrom.SimulateAndDumpDailyMaelstrom(_data);
+            // maelstrom.SimulateAndDumpDailyMaelstrom(_data);
 
             // Initialize DisplayObject pool
             displayObjectPool.Initialize(screenSize);
@@ -229,58 +233,58 @@ namespace Maelstrom.Unity
             return (float)((targetDate - dayStart).TotalHours / 24.0);
         }
 
+        private void BuildDayIndex()
+        {
+            _dayIndex = new Dictionary<DateTime, (int startIndex, int count)>();
+            if (_data.Length == 0) return;
+
+            var currentDay = _data[0].date.Date;
+            var startIndex = 0;
+
+            for (var i = 1; i < _data.Length; i++)
+            {
+                var day = _data[i].date.Date;
+                if (day == currentDay) continue;
+
+                _dayIndex[currentDay] = (startIndex, i - startIndex);
+                currentDay = day;
+                startIndex = i;
+            }
+
+            _dayIndex[currentDay] = (startIndex, _data.Length - startIndex);
+            AppLogger.Log($"Built day index with {_dayIndex.Count} days");
+        }
+
         private void LoadDayData(DateTime targetDay)
         {
-            _currentDayData.Clear();
+            if (!_dayIndex.TryGetValue(targetDay, out var range))
+            {
+                _currentDayStartIndex = 0;
+                _currentDayCount = 0;
+                return;
+            }
 
-            // Find all data points for the target day, starting from dataIndex for efficiency
-            for (var i = _dataIndex; i < _data.Length; i++)
-                if (_data[i].date.Date == targetDay)
-                {
-                    maelstrom.RegisterData(_data[i]);
-                    _currentDayData.Add(_data[i]);
-                }
-                else if (_data[i].date.Date > targetDay)
-                {
-                    // Since data is sorted chronologically, we can break early
-                    break;
-                }
+            _currentDayStartIndex = range.startIndex;
+            _currentDayCount = range.count;
 
-            // If we didn't find data starting from dataIndex, search from beginning
-            if (_currentDayData.Count == 0)
-                for (var i = 0; i < _dataIndex; i++)
-                    if (_data[i].date.Date == targetDay)
-                    {
-                        maelstrom.RegisterData(_data[i]);
-                        _currentDayData.Add(_data[i]);
-                    }
-
-            // Sort by time of day for proper progression
-            _currentDayData.Sort((a, b) => a.date.TimeOfDay.CompareTo(b.date.TimeOfDay));
-
-            //  AppLogger.Log($"Loaded {_currentDayData.Count} data points for day {targetDay:yyyy-MM-dd}");
+            for (var i = _currentDayStartIndex; i < _currentDayStartIndex + _currentDayCount; i++)
+                maelstrom.RegisterData(_data[i]);
         }
 
         private void SpawnDataPointsForCurrentDay(float normalizedCurrentTime)
         {
-            if (_currentDayData.Count == 0) return;
+            if (_currentDayCount == 0) return;
 
-            // Calculate how many data points should be spawned based on day progress
-            var totalPointsForDay = _currentDayData.Count;
-            var targetSpawnedCount = Mathf.RoundToInt(_dayProgress * totalPointsForDay);
-
-            // Get current maelstrom for radius calculation
+            var targetSpawnedCount = Mathf.RoundToInt(_dayProgress * _currentDayCount);
             var currentMaelstrom = maelstrom.GetCurrentMaelstrom();
 
-            // Spawn data points up to the target count with frame rate limiting
             while (_currentDayDataIndex < targetSpawnedCount &&
-                   _currentDayDataIndex < _currentDayData.Count &&
+                   _currentDayDataIndex < _currentDayCount &&
                    _objectsSpawnedThisFrame < maxObjectsPerFrame &&
                    _objectsSpawnedThisSecond < maxObjectsPerSecond)
             {
-                var dataPoint = _currentDayData[_currentDayDataIndex];
+                var dataPoint = _data[_currentDayStartIndex + _currentDayDataIndex];
 
-                // Handle ##OTHERS## datapoints with particle system
                 if (dataPoint.screen_name == "##OTHERS##")
                 {
                     GhostNetParticleManager.ConfigureParticleSystem(particles, dataPoint.nb_accounts_others,
@@ -289,7 +293,6 @@ namespace Maelstrom.Unity
                 }
                 else
                 {
-                    // Regular datapoints use display objects
                     displayObjectPool.ActivateDataPoint(dataPoint, normalizedCurrentTime, currentMaelstrom);
                 }
 
@@ -297,12 +300,9 @@ namespace Maelstrom.Unity
                 _currentDayDataIndex++;
                 _objectsSpawnedThisFrame++;
                 _objectsSpawnedThisSecond++;
-
-                // Update global data index to track overall progress
-                _dataIndex = Mathf.Max(_dataIndex, GetDataIndexForDate(dataPoint.date));
+                _dataIndex = _currentDayStartIndex + _currentDayDataIndex;
             }
 
-            // Log warnings if we hit performance limits
             if (_objectsSpawnedThisFrame >= maxObjectsPerFrame)
                 AppLogger.LogWarning($"Performance: Hit frame limit ({maxObjectsPerFrame} objects/frame). " +
                                      $"Remaining data points: {targetSpawnedCount - _currentDayDataIndex}");
@@ -312,26 +312,16 @@ namespace Maelstrom.Unity
                                      $"Remaining data points: {targetSpawnedCount - _currentDayDataIndex}");
         }
 
-        private int GetDataIndexForDate(DateTime date)
-        {
-            // Find the index of the data point with the given date
-            for (var i = 0; i < _data.Length; i++)
-                if (_data[i].date == date)
-                    return i;
-
-            return 0; // Default to 0 if not found
-        }
-
         private void LogDebugInfo()
         {
-            // Log recycling stats
-            AppLogger.Log($"Recycling Stats - Active: {displayObjectPool.GetActiveObjectCount()}, " +
-                          $"Inactive Queue: {displayObjectPool.GetInactiveObjectCount()}, " +
-                          $"Pool Size: {displayObjectPool.GetPoolSize()}");
-
-            // Log performance metrics
-            AppLogger.Log($"Performance - Objects/Frame: {_objectsSpawnedThisFrame}/{maxObjectsPerFrame}, " +
-                          $"Objects/Second: {_objectsSpawnedThisSecond}/{maxObjectsPerSecond}");
+            // // Log recycling stats
+            // AppLogger.Log($"Recycling Stats - Active: {displayObjectPool.GetActiveObjectCount()}, " +
+            //               $"Inactive Queue: {displayObjectPool.GetInactiveObjectCount()}, " +
+            //               $"Pool Size: {displayObjectPool.GetPoolSize()}");
+            //
+            // // Log performance metrics
+            // AppLogger.Log($"Performance - Objects/Frame: {_objectsSpawnedThisFrame}/{maxObjectsPerFrame}, " +
+            //               $"Objects/Second: {_objectsSpawnedThisSecond}/{maxObjectsPerSecond}");
 
             // // Log current day data progression
             // if (_currentDayData.Count > 0)

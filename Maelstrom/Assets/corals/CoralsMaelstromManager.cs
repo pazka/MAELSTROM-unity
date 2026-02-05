@@ -51,10 +51,10 @@ namespace Maelstrom.Unity
                 CommonMaelstrom.UpdateMaelstrom(currentNegativeSentiment / maxNegativeSentiment, rnd.NextDouble());
         }
 
-        public void UpdateMaelstrom()
+        public void Update()
         {
             currentMaelstrom =
-                CommonMaelstrom.UpdateMaelstrom(currentNegativeSentiment / maxNegativeSentiment);
+                CommonMaelstrom.ProgressMaelstrom();
         }
 
 
@@ -94,6 +94,8 @@ namespace Maelstrom.Unity
                 {
                     simulationMaelstrom.RegisterData(dataPoint);
 
+                    // Store the maelstrom value after processing this data point
+                    for (var i = 0; i < 1000; i++) simulationMaelstrom.Update();
                     // Store the maelstrom value after processing this data point
                     maelstromResults.Add((
                         dataPoint.date,

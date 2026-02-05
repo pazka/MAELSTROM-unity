@@ -83,6 +83,7 @@ namespace Maelstrom.Unity
 
             // Process data and manage display objects
             ProcessDataAndManageObjects();
+            maelstrom.Update();
 
             // Debug output
             if (showDebugInfo && _currentTime - _lastDebugTime >= debugUpdateInterval)
@@ -132,7 +133,7 @@ namespace Maelstrom.Unity
             maelstrom.RegisterDataBounds(_data);
 
             // Simulate and dump daily maelstrom data to CSV
-            maelstrom.SimulateAndDumpDailyMaelstrom(_data);
+            //maelstrom.SimulateAndDumpDailyMaelstrom(_data);
 
             // Initialize DisplayObject pool
             displayObjectPool.Initialize(screenSize);

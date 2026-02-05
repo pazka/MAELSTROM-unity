@@ -3,7 +3,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-using Random = System.Random;
 
 namespace Maelstrom.Unity
 {
@@ -149,14 +148,12 @@ namespace Maelstrom.Unity
             }
         }
 
-        private static void BroadcastCurrentValues(float currentRation)
+        private static void BroadcastCurrentMaelstrom()
         {
             if (!_isInitialized || localRoleId == RoleId.Debug) return;
 
             try
             {
-                NetworkManager.Instance.SendNetwork(DataTag.CurrentRatio,
-                    new FloatData(localRoleId, currentRation));
                 NetworkManager.Instance.SendNetwork(DataTag.TargetMaelstromValue,
                     new FloatData(localRoleId, targetMaelstrom));
                 NetworkManager.Instance.SendNetwork(DataTag.CurrentMaelstromValue,
@@ -185,19 +182,31 @@ namespace Maelstrom.Unity
             }
         }
 
-        public static float UpdateMaelstrom(float currentRatio, double netRnd = 0f, float speedModifier = 1.0f)
+
+        private static void BroadcastCurrentValues(float currentRatio)
         {
-            var rnd = new Random();
+            if (!_isInitialized || localRoleId == RoleId.Debug) return;
+
+            try
+            {
+                NetworkManager.Instance.SendNetwork(DataTag.CurrentRatio,
+                    new FloatData(localRoleId, currentRatio));
+            }
+            catch (Exception ex)
+            {
+                AppLogger.LogError($"Error send Network ratio: {ex.Message}");
+            }
+        }
+
+        public static float UpdateMaelstrom(float currentRatio, double netRnd = 0f)
+        {
             var externalMaelstromsValues = GetExternalMaelstroms();
             var externalMaestrom = externalMaelstromsValues.Length > 0
                 ? externalMaelstromsValues.Sum() / externalMaelstromsValues.Length
                 : 0f;
             var influencedRnd = netRnd + externalMaestrom * 0.3;
 
-            // Check if any previous maelstrom values were above 0.6
-            var hasHighPreviousValues = targetMaelstromHistory.Any(value => value >= 0.6f);
             var closeToTarget = Math.Abs(targetMaelstrom - currentMaelstrom) < 0.002f;
-
             if (closeToTarget)
             {
                 if (influencedRnd >= HIGH_MAELSTROM_THRESHOLD)
@@ -214,11 +223,21 @@ namespace Maelstrom.Unity
                 }
                 else
                 {
-                    setTarget(Mathf.Lerp(currentMaelstrom, currentRatio, 0.1f));
-                    // AppLogger.Log(
-                    //     $"Maelstrom Tgt/Crt : {currentRatio}, {targetMaelstrom}, extValue : ({externalMaestrom})");
+                    setTarget(currentRatio + externalMaestrom * 0.3f);
+                    AppLogger.Log(
+                        $"Maelstrom crt{currentRatio:F2}, tgt{targetMaelstrom:F2}, ext({externalMaestrom:F2}) rdn:{netRnd:F2}");
                 }
             }
+
+            BroadcastCurrentValues(currentRatio);
+            return currentMaelstrom;
+        }
+
+
+        public static float ProgressMaelstrom(float speedModifier = 1.0f)
+        {
+            // Check if any previous maelstrom values were above 0.6
+            var hasHighPreviousValues = targetMaelstromHistory.Any(value => value >= 0.6f);
 
             // Use inertia only if previous values were above 0.6
             var lerpSpeed = (hasHighPreviousValues ? 0.001f : 0.01f) * speedModifier;
@@ -228,7 +247,7 @@ namespace Maelstrom.Unity
             targetMaelstromHistory.Enqueue(targetMaelstrom);
             if (targetMaelstromHistory.Count > 100) targetMaelstromHistory.Dequeue();
 
-            BroadcastCurrentValues(currentRatio);
+            BroadcastCurrentMaelstrom();
 
             return currentMaelstrom;
         }
