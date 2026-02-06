@@ -17,7 +17,6 @@ namespace Maelstrom.Unity
         private int currentAccountCount;
         private DateTime currentDate;
         private float currentMaelstrom;
-        private GhostNetDataBound dataBounds;
         private int maxAccountCount;
         private int minAccountCount = int.MaxValue;
 
@@ -26,7 +25,7 @@ namespace Maelstrom.Unity
         /// </summary>
         public void RegisterDataBounds(GhostNetDataPoint[] data)
         {
-            var tmpDate = DateTime.MinValue;
+            var tmpDate = data[0].date.Date;
             var tmpAccountCount = 0;
 
             foreach (var dataPoint in data)
@@ -35,11 +34,8 @@ namespace Maelstrom.Unity
 
                 if (isNewDay)
                 {
-                    if (tmpDate != DateTime.MinValue) // Skip first iteration
-                    {
-                        if (tmpAccountCount < minAccountCount) minAccountCount = tmpAccountCount;
-                        if (tmpAccountCount > maxAccountCount) maxAccountCount = tmpAccountCount;
-                    }
+                    if (tmpAccountCount < minAccountCount) minAccountCount = tmpAccountCount;
+                    if (tmpAccountCount > maxAccountCount) maxAccountCount = tmpAccountCount;
 
                     tmpAccountCount = 0;
                     tmpDate = dataPoint.date.Date;

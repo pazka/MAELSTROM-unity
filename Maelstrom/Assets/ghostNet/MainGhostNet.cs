@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using Random = System.Random;
 
 namespace Maelstrom.Unity
 {
@@ -37,27 +36,24 @@ namespace Maelstrom.Unity
 
         // Day progression tracking for smooth spawning
         private DateTime _currentDay = DateTime.MinValue;
-        private int _currentDayCount;
-        private int _currentDayDataIndex;
-        private int _currentDayStartIndex;
 
-        private DateTime _currentDisplayedDate = DateTime.MinValue;
 
         // Timing
+        private float _currentNormalizedTime;
         private float _currentTime;
 
         // Data management
         private GhostNetDataPoint[] _data;
-        private int _dataIndex; // Track current position in data for looping
-        private Dictionary<DateTime, (int startIndex, int count)> _dayIndex;
+        private int _dataIndex;
+        private int _dataIndexStartForCurrentDate;
+        private Dictionary<DateTime, (int startIndex, int count)> _dataRangeByDate;
         private float _dayProgress; // 0 to 1, progress through current day
-        private float _lastDebugTime;
-        private float _lastSecondReset;
-        private float _normalizedDisplayDuration; // One day in normalized data space
-        private int _objectsSpawnedThisFrame;
-        private int _objectsSpawnedThisSecond;
-        private Random _random = new();
-        private int loopDuration;
+        private bool _hasLooped;
+        private int _loopDuration;
+        private int _nbDataSpawnedForThisDate;
+        private float _normalizedDataTTl; // One day in normalized data space
+
+        private int _targetDataToSpawnForThisDate;
 
         private void Start()
         {
@@ -78,43 +74,39 @@ namespace Maelstrom.Unity
             else
                 AppLogger.Log("Waiting for ghostNet data to load...");
 
-            loopDuration = Config.Get("loopDuration", 1200);
+            _loopDuration = Config.Get("loopDuration", 1200);
+            var startPosition = Config.Get("startPosition", 0f);
             NetworkManager.Instance.Initialize(5002, new[] { 5000, 5001, 5003 });
             CommonMaelstrom.InitializeWithPureData(CommonMaelstrom.RoleId.GhostNet, pureDataConnector);
+
+            _currentTime = startPosition * _loopDuration;
+            _currentNormalizedTime = startPosition;
+            _currentDay = GetCurrentDayFromNormalizedTime(startPosition);
         }
 
         private void Update()
         {
+            _hasLooped = false;
             NetworkManager.Instance?.ProcessCallbacks();
             if (!dataLoader.IsDataLoaded) return;
 
             _currentTime += Time.deltaTime;
-
-            // Reset frame counters
-            _objectsSpawnedThisFrame = 0;
-
-            // Reset per-second counter
-            if (_currentTime - _lastSecondReset >= 1.0f)
+            _currentNormalizedTime = _currentTime / _loopDuration;
+            if (_currentNormalizedTime > 1f)
             {
-                _objectsSpawnedThisSecond = 0;
-                _lastSecondReset = _currentTime;
+                _currentTime = 0;
+                _currentNormalizedTime = 0;
+                _hasLooped = true;
             }
 
             // Process data and manage display objects
-            ProcessDataAndManageObjects();
+            ProcessDataAndManageObjects(_currentNormalizedTime);
             maelstrom.Update();
 
             NetworkManager.Instance?.SendNetwork(DataTag.CurrentDataDate,
                 new TextData(CommonMaelstrom.RoleId.GhostNet,
-                    $" Data({_dataIndex}/{_data.Length})=>{_dayProgress:F2}/{_currentTime % loopDuration / loopDuration:F2}({_currentDisplayedDate:yyyy-MM-dd HH:mm:ss})")
+                    $" Data({_dataIndex}/{_data.Length})=>{_dayProgress:F2}/{_currentNormalizedTime:F2}({_currentDay:yyyy-MM-dd})")
             );
-
-            // Debug output
-            if (showDebugInfo && _currentTime - _lastDebugTime >= debugUpdateInterval)
-            {
-                LogDebugInfo();
-                _lastDebugTime = _currentTime;
-            }
         }
 
         private void OnDestroy()
@@ -130,8 +122,8 @@ namespace Maelstrom.Unity
         {
             maelstrom.RegisterDataBounds(dataLoader.Data);
             _data = dataLoader.Data;
-            _normalizedDisplayDuration = dataLoader.GetNormalizedDuration(DATA_TTL);
-            BuildDayIndex();
+            _normalizedDataTTl = dataLoader.GetNormalizedDuration(DATA_TTL);
+            _dataRangeByDate = BuildDataRangeByDateIndex();
 
             // Simulate and dump maelstrom data to CSV
             // maelstrom.SimulateAndDumpDailyMaelstrom(_data);
@@ -140,17 +132,16 @@ namespace Maelstrom.Unity
             displayObjectPool.Initialize(screenSize);
 
             AppLogger.Log($"Initialized ghostNet with {_data.Length} data points");
-            AppLogger.Log($"One day in normalized data space: {_normalizedDisplayDuration:F6}");
+            AppLogger.Log($"One day in normalized data space: {_normalizedDataTTl:F6}");
             AppLogger.Log($"DisplayObject pool initialized with {displayObjectPool.GetPoolSize()} objects");
         }
 
 
-        private void ProcessDataAndManageObjects()
+        private void ProcessDataAndManageObjects(float normalizedCurrentTime)
         {
             // Use modulo to create looping behavior
-            var normalizedCurrentTime = _currentTime % loopDuration / loopDuration;
 
-            displayObjectPool.RecycleOldObjects(normalizedCurrentTime, _normalizedDisplayDuration);
+            displayObjectPool.RecycleOldObjects(normalizedCurrentTime, _normalizedDataTTl);
 
             ProcessDayProgression(normalizedCurrentTime);
 
@@ -163,80 +154,56 @@ namespace Maelstrom.Unity
         private void ProcessDayProgression(float normalizedCurrentTime)
         {
             // Calculate which day we should be processing
-            var targetDay = GetDayFromNormalizedTime(normalizedCurrentTime);
-
-            // Check if we've looped back to the beginning (when normalized time resets to 0)
-            var hasLooped = normalizedCurrentTime < 0.01f && _currentTime > loopDuration;
+            var targetDay = GetCurrentDayFromNormalizedTime(normalizedCurrentTime);
 
             // If we've moved to a new day or looped back, load that day's data
-            if (targetDay != _currentDay || hasLooped)
+            if (targetDay.Date != _currentDay.Date) StartNewDay(targetDay);
+
+            //know where in the current day we are so that will know how many data points to spawn
+            _dayProgress = GetCurrentDayInternalProgress();
+            // Spawn data points progressively throughout the day
+            SpawnDataPointsForCurrentDayProgress(_dayProgress);
+        }
+
+        private void StartNewDay(DateTime targetDay)
+        {
+            AppLogger.Log($"New day : {targetDay:yyyy-MM-dd}");
+            // Clear all active objects when looping to prevent accumulation
+            if (_hasLooped)
             {
-                // Clear all active objects when looping to prevent accumulation
-                if (hasLooped)
+                AppLogger.Log(
+                    $"LOOP DETECTED: Clearing {displayObjectPool.GetActiveObjectCount()} active objects and resetting data index");
+                // displayObjectPool.ClearAllActiveObjects();
+
+                _dataIndex = 0;
+            }
+            else
+            {
+                if (!_dataRangeByDate.TryGetValue(targetDay.Date, out var range))
                 {
-                    AppLogger.Log(
-                        $"LOOP DETECTED: Clearing {displayObjectPool.GetActiveObjectCount()} active objects and resetting data index");
-                    displayObjectPool.ClearAllActiveObjects();
-
-                    // Clear particle system when looping
-                    if (particles != null)
-                    {
-                        particles.Stop();
-                        particles.Clear();
-                    }
-
-                    _dataIndex = 0;
+                    AppLogger.Log($"_dataRangeByDate doesn't have a range for {targetDay}");
+                    return;
                 }
 
-                LoadDayData(targetDay);
-                _currentDay = targetDay;
-                _currentDayDataIndex = 0;
-                _dayProgress = 0f;
-
-                // Clear particle system when changing days
-                if (particles != null) particles.Stop();
+                _dataIndexStartForCurrentDate = range.startIndex;
+                _targetDataToSpawnForThisDate = range.count;
             }
 
-            // Calculate progress through the current day (0 to 1)
-            _dayProgress = GetDayProgress(normalizedCurrentTime);
+            AppLogger.Log($"Data to spawn for this day : {_targetDataToSpawnForThisDate}");
 
-            // Spawn data points progressively throughout the day
-            SpawnDataPointsForCurrentDay(normalizedCurrentTime);
+            _currentDay = targetDay;
+            _nbDataSpawnedForThisDate = 0;
+
+            // Clear particle system when changing days
+            if (particles != null) particles.Stop();
         }
 
-        private DateTime GetDayFromNormalizedTime(float normalizedTime)
+        // used to determine when have passed a new day precomputed,
+        // so that we know for how long we have to display some data
+        private Dictionary<DateTime, (int startIndex, int count)> BuildDataRangeByDateIndex()
         {
-            if (!dataLoader.IsDataLoaded || _data.Length == 0) return DateTime.MinValue;
-
-            // Map normalized time to actual date range
-            var totalSpan = dataLoader.DataBounds.Max.date - dataLoader.DataBounds.Min.date;
-            var targetDate = dataLoader.DataBounds.Min.date.AddTicks((long)(totalSpan.Ticks * normalizedTime));
-            return targetDate.Date;
-        }
-
-        private float GetDayProgress(float normalizedTime)
-        {
-            if (!dataLoader.IsDataLoaded || _data.Length == 0) return 0f;
-
-            // Calculate progress within the current day
-            var totalSpan = dataLoader.DataBounds.Max.date - dataLoader.DataBounds.Min.date;
-            var targetDate = dataLoader.DataBounds.Min.date.AddTicks((long)(totalSpan.Ticks * normalizedTime));
-
-            // Get the start and end of the current day
-            var dayStart = targetDate.Date;
-            var dayEnd = dayStart.AddDays(1);
-
-            // Calculate progress within the day (0 to 1)
-            if (targetDate < dayStart) return 0f;
-            if (targetDate >= dayEnd) return 1f;
-
-            return (float)((targetDate - dayStart).TotalHours / 24.0);
-        }
-
-        private void BuildDayIndex()
-        {
-            _dayIndex = new Dictionary<DateTime, (int startIndex, int count)>();
-            if (_data.Length == 0) return;
+            var dataRangeByDate = new Dictionary<DateTime, (int startIndex, int count)>();
+            if (_data.Length == 0) return dataRangeByDate;
 
             var currentDay = _data[0].date.Date;
             var startIndex = 0;
@@ -244,46 +211,59 @@ namespace Maelstrom.Unity
             for (var i = 1; i < _data.Length; i++)
             {
                 var day = _data[i].date.Date;
-                if (day == currentDay) continue;
+                var isNewDay = day != currentDay;
+                if (!isNewDay) continue;
 
-                _dayIndex[currentDay] = (startIndex, i - startIndex);
+                //new day
+                dataRangeByDate[currentDay] = (startIndex, i - startIndex);
                 currentDay = day;
                 startIndex = i;
             }
 
-            _dayIndex[currentDay] = (startIndex, _data.Length - startIndex);
-            AppLogger.Log($"Built day index with {_dayIndex.Count} days");
+            //handle last loop
+            dataRangeByDate[currentDay] = (startIndex, _data.Length - startIndex);
+            AppLogger.Log($"Built day index with {dataRangeByDate.Count} days");
+
+            return dataRangeByDate;
         }
 
-        private void LoadDayData(DateTime targetDay)
+        private float GetCurrentDayInternalProgress()
         {
-            if (!_dayIndex.TryGetValue(targetDay, out var range))
-            {
-                _currentDayStartIndex = 0;
-                _currentDayCount = 0;
-                return;
-            }
+            var minDate = dataLoader.DataBounds.Min.date.Date;
+            var maxDate = dataLoader.DataBounds.Max.date.Date;
+            var dateRange = maxDate - minDate;
 
-            _currentDayStartIndex = range.startIndex;
-            _currentDayCount = range.count;
+            var normalizedOneDayDuration = 1f / dateRange.Days;
+            var normalizedTimeStartForDayStart = (_currentDay.Date - minDate).TotalDays / dateRange.Days;
+            var currentDayProgress =
+                (_currentNormalizedTime - normalizedTimeStartForDayStart) / normalizedOneDayDuration;
 
-            for (var i = _currentDayStartIndex; i < _currentDayStartIndex + _currentDayCount; i++)
-                maelstrom.RegisterData(_data[i]);
+
+            return (float)currentDayProgress;
         }
 
-        private void SpawnDataPointsForCurrentDay(float normalizedCurrentTime)
+        private DateTime GetCurrentDayFromNormalizedTime(float normalizedTime)
         {
-            if (_currentDayCount == 0) return;
+            var minDate = dataLoader.DataBounds.Min.date.Date;
+            var maxDate = dataLoader.DataBounds.Max.date.Date;
+            var dateRange = maxDate - minDate;
+            var currentDate = minDate + TimeSpan.FromDays(normalizedTime * dateRange.Days);
+            return currentDate;
+        }
 
-            var targetSpawnedCount = Mathf.RoundToInt(_dayProgress * _currentDayCount);
+        private void SpawnDataPointsForCurrentDayProgress(float currentDayProgress)
+        {
+            if (_targetDataToSpawnForThisDate == 0) return;
+
+            var targetSpawnedCount = Mathf.RoundToInt(currentDayProgress * _targetDataToSpawnForThisDate);
             var currentMaelstrom = maelstrom.GetCurrentMaelstrom();
 
-            while (_currentDayDataIndex < targetSpawnedCount &&
-                   _currentDayDataIndex < _currentDayCount &&
-                   _objectsSpawnedThisFrame < maxObjectsPerFrame &&
-                   _objectsSpawnedThisSecond < maxObjectsPerSecond)
+            AppLogger.Log(
+                $"SPAWNING {targetSpawnedCount} data points = {_targetDataToSpawnForThisDate} * {currentDayProgress:F2}");
+            while (_nbDataSpawnedForThisDate < targetSpawnedCount &&
+                   _nbDataSpawnedForThisDate < _targetDataToSpawnForThisDate)
             {
-                var dataPoint = _data[_currentDayStartIndex + _currentDayDataIndex];
+                var dataPoint = _data[_dataIndexStartForCurrentDate + _nbDataSpawnedForThisDate];
 
                 if (dataPoint.screen_name == "##OTHERS##")
                 {
@@ -293,51 +273,13 @@ namespace Maelstrom.Unity
                 }
                 else
                 {
-                    displayObjectPool.ActivateDataPoint(dataPoint, normalizedCurrentTime, currentMaelstrom);
+                    maelstrom.RegisterData(dataPoint);
+                    displayObjectPool.ActivateDataPoint(dataPoint, _currentNormalizedTime, currentMaelstrom);
                 }
 
-                _currentDisplayedDate = dataPoint.date;
-                _currentDayDataIndex++;
-                _objectsSpawnedThisFrame++;
-                _objectsSpawnedThisSecond++;
-                _dataIndex = _currentDayStartIndex + _currentDayDataIndex;
+                _nbDataSpawnedForThisDate++;
+                _dataIndex = _dataIndexStartForCurrentDate + _nbDataSpawnedForThisDate;
             }
-
-            if (_objectsSpawnedThisFrame >= maxObjectsPerFrame)
-                AppLogger.LogWarning($"Performance: Hit frame limit ({maxObjectsPerFrame} objects/frame). " +
-                                     $"Remaining data points: {targetSpawnedCount - _currentDayDataIndex}");
-
-            if (_objectsSpawnedThisSecond >= maxObjectsPerSecond)
-                AppLogger.LogWarning($"Performance: Hit second limit ({maxObjectsPerSecond} objects/second). " +
-                                     $"Remaining data points: {targetSpawnedCount - _currentDayDataIndex}");
-        }
-
-        private void LogDebugInfo()
-        {
-            // // Log recycling stats
-            // AppLogger.Log($"Recycling Stats - Active: {displayObjectPool.GetActiveObjectCount()}, " +
-            //               $"Inactive Queue: {displayObjectPool.GetInactiveObjectCount()}, " +
-            //               $"Pool Size: {displayObjectPool.GetPoolSize()}");
-            //
-            // // Log performance metrics
-            // AppLogger.Log($"Performance - Objects/Frame: {_objectsSpawnedThisFrame}/{maxObjectsPerFrame}, " +
-            //               $"Objects/Second: {_objectsSpawnedThisSecond}/{maxObjectsPerSecond}");
-
-            // // Log current day data progression
-            // if (_currentDayData.Count > 0)
-            // {
-            //     AppLogger.Log($"  Current Day Data: {_currentDayDataIndex}/{_currentDayData.Count} spawned, " +
-            //                   $"Target: {Mathf.RoundToInt(_dayProgress * _currentDayData.Count)}");
-            //
-            //     if (_currentDayDataIndex < _currentDayData.Count)
-            //     {
-            //         var nextDataPoint = _currentDayData[_currentDayDataIndex];
-            //         AppLogger.Log($"  Next data point: {nextDataPoint.date:yyyy-MM-dd HH:mm:ss}, " +
-            //                       $"Tweets: {nextDataPoint.nb_tweets}, Followers: {nextDataPoint.followers_count}");
-            //     }
-            // }
-
-            // Log current date being displayed
         }
     }
 }
