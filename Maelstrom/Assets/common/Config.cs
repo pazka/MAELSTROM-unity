@@ -6,8 +6,8 @@ using UnityEngine;
 namespace Maelstrom.Unity
 {
     /// <summary>
-    /// Static configuration loaded once from StreamingAssets/config.json.
-    /// Editable before/during build; used at runtime on Windows.
+    ///     Static configuration loaded once from StreamingAssets/config.json.
+    ///     Editable before/during build; used at runtime on Windows.
     /// </summary>
     public static class Config
     {
@@ -21,7 +21,7 @@ namespace Maelstrom.Unity
             _data = new Dictionary<string, object>();
             _loaded = true;
 
-            string path = Path.Combine(Application.streamingAssetsPath, "config.json");
+            var path = Path.Combine(Application.streamingAssetsPath, "config.json");
             if (!File.Exists(path))
             {
                 AppLogger.LogWarning($"config.json not found at {path}, using empty config.");
@@ -30,9 +30,11 @@ namespace Maelstrom.Unity
 
             try
             {
-                string json = File.ReadAllText(path);
+                var json = File.ReadAllText(path);
                 if (string.IsNullOrWhiteSpace(json)) return;
                 _data = ParseFlatJson(json);
+                AppLogger.Log($"Config loaded at {path}");
+                AppLogger.Log($"Config keys: {string.Join(", ", _data.Keys)}");
             }
             catch (Exception e)
             {
@@ -41,7 +43,7 @@ namespace Maelstrom.Unity
         }
 
         /// <summary>
-        /// Parse flat JSON { "key": value, ... }. JsonUtility does not support Dictionary, so we use a minimal parser.
+        ///     Parse flat JSON { "key": value, ... }. JsonUtility does not support Dictionary, so we use a minimal parser.
         /// </summary>
         private static Dictionary<string, object> ParseFlatJson(string json)
         {
@@ -49,30 +51,40 @@ namespace Maelstrom.Unity
             json = json.Trim();
             if (!json.StartsWith("{") || !json.EndsWith("}")) return result;
 
-            int i = 1;
+            var i = 1;
             while (i < json.Length)
             {
                 i = SkipWhitespace(json, i);
                 if (i >= json.Length || json[i] == '}') break;
-                if (json[i] != '"') { i++; continue; }
+                if (json[i] != '"')
+                {
+                    i++;
+                    continue;
+                }
 
-                int keyStart = i + 1;
-                int keyEnd = json.IndexOf('"', keyStart);
+                var keyStart = i + 1;
+                var keyEnd = json.IndexOf('"', keyStart);
                 if (keyEnd < 0) break;
-                string key = json.Substring(keyStart, keyEnd - keyStart);
+                var key = json.Substring(keyStart, keyEnd - keyStart);
 
                 i = SkipWhitespace(json, keyEnd + 1);
-                if (i >= json.Length || json[i] != ':') { i++; continue; }
+                if (i >= json.Length || json[i] != ':')
+                {
+                    i++;
+                    continue;
+                }
+
                 i = SkipWhitespace(json, i + 1);
                 if (i >= json.Length) break;
 
                 object value;
-                int next = ParseValue(json, i, out value);
+                var next = ParseValue(json, i, out value);
                 if (next > i) result[key] = value;
                 i = next;
                 i = SkipWhitespace(json, i);
                 if (i < json.Length && json[i] == ',') i++;
             }
+
             return result;
         }
 
@@ -85,40 +97,109 @@ namespace Maelstrom.Unity
         private static int ParseValue(string s, int i, out object value)
         {
             value = null;
+            if (i >= s.Length) return i;
+
             if (s[i] == '"')
             {
-                int start = i + 1;
-                int end = start;
+                var start = i + 1;
+                var end = start;
                 while (end < s.Length)
                 {
-                    if (s[end] == '\\') { end += 2; continue; }
+                    if (s[end] == '\\')
+                    {
+                        end += 2;
+                        continue;
+                    }
+
                     if (s[end] == '"') break;
                     end++;
                 }
+
                 value = s.Substring(start, end - start);
                 return end + 1;
             }
-            int j = i;
-            while (j < s.Length && s[j] != ',' && s[j] != '}' && !char.IsWhiteSpace(s[j])) j++;
-            string raw = s.Substring(i, j - i).Trim();
-            if (raw == "true") { value = true; return j; }
-            if (raw == "false") { value = false; return j; }
+
+            if (s[i] == '[')
+            {
+                var list = new List<object>();
+                i = SkipWhitespace(s, i + 1);
+                while (i < s.Length && s[i] != ']')
+                {
+                    object element;
+                    i = ParseValue(s, i, out element);
+                    if (element != null) list.Add(element);
+                    i = SkipWhitespace(s, i);
+                    if (i < s.Length && s[i] == ',') i++;
+                    i = SkipWhitespace(s, i);
+                }
+
+                value = list;
+                return i < s.Length ? i + 1 : i;
+            }
+
+            var j = i;
+            while (j < s.Length && s[j] != ',' && s[j] != '}' && s[j] != ']' && !char.IsWhiteSpace(s[j])) j++;
+            var raw = s.Substring(i, j - i).Trim();
+            if (raw == "true")
+            {
+                value = true;
+                return j;
+            }
+
+            if (raw == "false")
+            {
+                value = false;
+                return j;
+            }
+
             if (raw == "null") return j;
-            if (int.TryParse(raw, out int vi)) { value = vi; return j; }
-            if (float.TryParse(raw, out float vf)) { value = vf; return j; }
+            if (int.TryParse(raw, out var vi))
+            {
+                value = vi;
+                return j;
+            }
+
+            if (float.TryParse(raw, out var vf))
+            {
+                value = vf;
+                return j;
+            }
+
             value = raw;
             return j;
         }
 
         /// <summary>
-        /// Get config value by key, with optional default.
+        ///     Get config value by key, with optional default.
         /// </summary>
         public static T Get<T>(string key, T defaultValue = default)
         {
             EnsureLoaded();
-            if (!_data.TryGetValue(key, out object v)) return defaultValue;
+            if (!_data.TryGetValue(key, out var v)) return defaultValue;
             if (v == null) return defaultValue;
             if (v is T t) return t;
+
+            if (typeof(T).IsArray && v is List<object> list)
+            {
+                var elementType = typeof(T).GetElementType();
+                var array = Array.CreateInstance(elementType, list.Count);
+                for (var i = 0; i < list.Count; i++)
+                {
+                    try
+                    {
+                        var element = list[i];
+                        array.SetValue(element.GetType() == elementType 
+                            ? element 
+                            : Convert.ChangeType(element, elementType), i);
+                    }
+                    catch
+                    {
+                        AppLogger.LogWarning($"Config array '{key}' element {i} could not be converted to {elementType.Name}.");
+                    }
+                }
+                return (T)(object)array;
+            }
+
             try
             {
                 return (T)Convert.ChangeType(v, typeof(T));
@@ -131,7 +212,40 @@ namespace Maelstrom.Unity
         }
 
         /// <summary>
-        /// True if the key exists in config.
+        ///     Get config array by key, converting each element to type T.
+        /// </summary>
+        public static T[] GetArray<T>(string key, T[] defaultValue = null)
+        {
+            EnsureLoaded();
+            if (!_data.TryGetValue(key, out var v)) return defaultValue ?? Array.Empty<T>();
+            if (v is not List<object> list) return defaultValue ?? Array.Empty<T>();
+
+            var result = new T[list.Count];
+            for (var i = 0; i < list.Count; i++)
+            {
+                var element = list[i];
+                if (element is T t)
+                {
+                    result[i] = t;
+                    continue;
+                }
+
+                try
+                {
+                    result[i] = (T)Convert.ChangeType(element, typeof(T));
+                }
+                catch
+                {
+                    AppLogger.LogWarning($"Config array '{key}' element {i} could not be converted to {typeof(T).Name}.");
+                    result[i] = default;
+                }
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        ///     True if the key exists in config.
         /// </summary>
         public static bool HasKey(string key)
         {
@@ -140,7 +254,7 @@ namespace Maelstrom.Unity
         }
 
         /// <summary>
-        /// All config keys.
+        ///     All config keys.
         /// </summary>
         public static string[] GetAllKeys()
         {
@@ -151,7 +265,7 @@ namespace Maelstrom.Unity
         }
 
         /// <summary>
-        /// Reload config from StreamingAssets/config.json.
+        ///     Reload config from StreamingAssets/config.json.
         /// </summary>
         public static void Reload()
         {

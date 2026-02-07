@@ -17,33 +17,30 @@ namespace Maelstrom.Unity
         [SerializeField]
         private GhostNetPointPool ghostNetPointPool; // Reference to the point pool for creating new objects
 
-        private List<GhostNetDisplayObject> _activeObjects = new();
-        private readonly Queue<GhostNetDisplayObject> _inactiveObjects = new();
-        private Vector2 centerPosition = new(0f, 100f); // Default center position
+        public Vector2 _centerPosition = new(0f, 0f); // Default center position
 
-        private Vector2 screenSize;
+        private readonly Queue<GhostNetDisplayObject> _inactiveObjects = new();
+
+        private List<GhostNetDisplayObject> _activeObjects = new();
+
+        private Vector2 _screenSize;
 
         /// <summary>
         ///     Check if the pool is initialized
         /// </summary>
         public bool IsInitialized { get; private set; }
 
-        /// <summary>
-        ///     Get the maximum number of active objects
-        /// </summary>
-        public int MaxActiveObjects => maxActiveObjects;
-
-        /// <summary>
-        ///     Get the maximum pool size
-        /// </summary>
-        public int MaxPoolSize => maxPoolSize;
 
         /// <summary>
         ///     Initialize the display object pool
         /// </summary>
-        public void Initialize(Vector2 screenSize)
+        public void Initialize(Vector2 screenSize, Vector2 centerOffset)
         {
-            this.screenSize = screenSize;
+            _screenSize = screenSize;
+
+            _centerPosition = new Vector2(centerOffset[0], centerOffset[1]);
+            transform.SetPositionAndRotation(new Vector3(_centerPosition.x, _centerPosition.y),
+                Quaternion.identity);
 
             if (IsInitialized)
             {
@@ -72,15 +69,6 @@ namespace Maelstrom.Unity
 
             IsInitialized = true;
             AppLogger.Log($"DisplayObjectPool initialized with {_inactiveObjects.Count} objects");
-        }
-
-        /// <summary>
-        ///     Set the center position for display objects
-        /// </summary>
-        public void SetCenterPosition(Vector2 centerPos)
-        {
-            centerPosition = centerPos;
-            AppLogger.Log($"Center position set to: {centerPosition}");
         }
 
         /// <summary>
@@ -202,8 +190,8 @@ namespace Maelstrom.Unity
             }
 
             // Let the display object handle its own initialization based on data point
-            displayObject.InitializeFromDataPoint(dataPoint, screenSize, normalizedCreationtime, currentMaelstrom,
-                centerPosition);
+            displayObject.InitializeFromDataPoint(dataPoint, _screenSize, normalizedCreationtime, currentMaelstrom,
+                _centerPosition);
             displayObject.SetEnabled(true);
             _activeObjects.Add(displayObject);
         }
@@ -264,29 +252,6 @@ namespace Maelstrom.Unity
                     obj.Update(Time.deltaTime, maelstrom);
         }
 
-        /// <summary>
-        ///     Get all active objects for external iteration
-        /// </summary>
-        public List<GhostNetDisplayObject> GetActiveObjects()
-        {
-            return _activeObjects;
-        }
-
-        /// <summary>
-        ///     Get the count of active objects
-        /// </summary>
-        public int GetActiveObjectCount()
-        {
-            return _activeObjects.Count;
-        }
-
-        /// <summary>
-        ///     Get the count of inactive objects
-        /// </summary>
-        public int GetInactiveObjectCount()
-        {
-            return _inactiveObjects.Count;
-        }
 
         /// <summary>
         ///     Get the total pool size
@@ -321,26 +286,6 @@ namespace Maelstrom.Unity
             ghostNetPointPool = null; // Clear the reference
 
             AppLogger.Log("DisplayObjectPool cleared and reset");
-        }
-
-        /// <summary>
-        ///     Clear all active objects and move them back to inactive queue
-        /// </summary>
-        public void ClearAllActiveObjects()
-        {
-            for (var i = _activeObjects.Count - 1; i >= 0; i--)
-            {
-                var obj = _activeObjects[i];
-                if (obj != null)
-                {
-                    obj.SetEnabled(false);
-                    _inactiveObjects.Enqueue(obj);
-                }
-            }
-
-            _activeObjects.Clear();
-            AppLogger.Log(
-                $"Cleared all active objects. Active: {_activeObjects.Count}, Inactive: {_inactiveObjects.Count}");
         }
     }
 }

@@ -48,6 +48,8 @@ namespace Maelstrom.Unity
             _udpService = new UdpService(listenPort, _destinationPorts);
             _udpService.OnDataReceived += HandleUdpDataReceived;
             _udpService.Start();
+
+            AppLogger.Log($"Config keys: {string.Join(", ", Config.GetAllKeys())}");
         }
 
         private void HandleUdpDataReceived(byte[] buffer)

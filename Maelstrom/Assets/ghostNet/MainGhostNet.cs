@@ -58,6 +58,7 @@ namespace Maelstrom.Unity
 
         private void Start()
         {
+            NetworkManager.Instance.Initialize(5002, new[] { 5000, 5001, 5003 });
             Application.runInBackground = true;
             if (SceneManager.GetActiveScene().name != "GhostNetsScene")
             {
@@ -77,7 +78,7 @@ namespace Maelstrom.Unity
 
             _loopDuration = Config.Get("loopDuration", 1200);
             var startPosition = Config.Get("startPosition", 0f);
-            NetworkManager.Instance.Initialize(5002, new[] { 5000, 5001, 5003 });
+
             CommonMaelstrom.InitializeWithPureData(CommonMaelstrom.RoleId.GhostNet, pureDataConnector);
 
             _currentTime = startPosition * _loopDuration;
@@ -140,8 +141,13 @@ namespace Maelstrom.Unity
             // maelstrom.SimulateAndDumpDailyMaelstrom(_data);
 
             // Initialize DisplayObject pool
-            displayObjectPool.Initialize(screenSize);
-
+            var centerOffset = Config.Get("centerPositionOffset", new[]
+            {
+                0f, 0f
+            });
+            AppLogger.Log($"[GHOSTNET_MAIN] CenterOffset: {centerOffset}");
+            displayObjectPool.Initialize(screenSize, new Vector2(centerOffset[0], centerOffset[1]));
+            particlePool.Initialize(screenSize, new Vector2(centerOffset[0], centerOffset[1]));
             AppLogger.Log($"Initialized ghostNet with {_data.Length} data points");
             AppLogger.Log($"One day in normalized data space: {_normalizedDataTTl:F6}");
             AppLogger.Log($"DisplayObject pool initialized with {displayObjectPool.GetPoolSize()} objects");

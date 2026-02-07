@@ -3,26 +3,28 @@ using UnityEngine;
 namespace Maelstrom.Unity
 {
     /// <summary>
-    /// Manages a pool of particle systems to prevent property changes from affecting previously emitted particles.
-    /// When spawning particles with different properties, it cycles to the next particle system in the pool.
+    ///     Manages a pool of particle systems to prevent property changes from affecting previously emitted particles.
+    ///     When spawning particles with different properties, it cycles to the next particle system in the pool.
     /// </summary>
     public class ParticleSystemPool : MonoBehaviour
     {
         [SerializeField] private ParticleSystem templateParticleSystem;
         [SerializeField] private int poolSize = 10;
-
-        private ParticleSystem[] _particleSystems;
+        private Vector2 _centerPosition;
         private int _currentIndex;
         private bool _isInitialized;
 
-        private void Start()
-        {
-            if (!_isInitialized)
-                Initialize();
-        }
+        private ParticleSystem[] _particleSystems;
+        private Vector2 _screenSize;
 
-        public void Initialize()
+
+        public void Initialize(Vector2 screenSize, Vector2 centerOffset)
         {
+            _centerPosition = new Vector2(centerOffset[0], centerOffset[1]);
+            transform.SetPositionAndRotation(new Vector3(_centerPosition.x, _centerPosition.y),
+                Quaternion.identity);
+            _screenSize = screenSize;
+
             if (_isInitialized)
                 return;
 
@@ -34,7 +36,7 @@ namespace Maelstrom.Unity
 
             _particleSystems = new ParticleSystem[poolSize];
 
-            for (int i = 0; i < poolSize; i++)
+            for (var i = 0; i < poolSize; i++)
             {
                 var instance = Instantiate(templateParticleSystem, transform);
                 instance.name = $"ParticleSystem_{i}";
@@ -50,8 +52,8 @@ namespace Maelstrom.Unity
         }
 
         /// <summary>
-        /// Spawns particles using the next particle system in the pool.
-        /// Stops the current system's emission and starts the next one with the given properties.
+        ///     Spawns particles using the next particle system in the pool.
+        ///     Stops the current system's emission and starts the next one with the given properties.
         /// </summary>
         /// <param name="count">Number of particles to emit</param>
         /// <param name="maelstrom">Current maelstrom value for particle properties</param>
@@ -74,7 +76,7 @@ namespace Maelstrom.Unity
         }
 
         /// <summary>
-        /// Stops all particle systems in the pool
+        ///     Stops all particle systems in the pool
         /// </summary>
         public void StopAll()
         {
@@ -82,14 +84,12 @@ namespace Maelstrom.Unity
                 return;
 
             foreach (var ps in _particleSystems)
-            {
                 if (ps != null)
                     ps.Stop(true, ParticleSystemStopBehavior.StopEmitting);
-            }
         }
 
         /// <summary>
-        /// Clears all particles from all systems in the pool
+        ///     Clears all particles from all systems in the pool
         /// </summary>
         public void ClearAll()
         {
@@ -97,10 +97,8 @@ namespace Maelstrom.Unity
                 return;
 
             foreach (var ps in _particleSystems)
-            {
                 if (ps != null)
                     ps.Clear();
-            }
         }
     }
 }
