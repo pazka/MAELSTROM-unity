@@ -1,10 +1,10 @@
 {
   "loopDuration": 1200,
-  "startPosition": 0.98,
+  "startPosition": 0.0,
   "centerPositionOffset": [
     0.0,
-    -1000.0
+    0.0
   ],
   "broadastIPv4Adress": "192.168.1.255",
-  "multicastIPv6Adress": "ff02::1"
+  "multicastIPv6Adress": "ff02::1",
 }

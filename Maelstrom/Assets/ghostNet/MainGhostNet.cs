@@ -163,8 +163,7 @@ namespace Maelstrom.Unity
             ProcessDayProgression(normalizedCurrentTime);
 
             // Publish current ghostNet maelstrom to network
-            var localMaelstrom = maelstrom.GetCurrentMaelstrom();
-            displayObjectPool.UpdateActiveObjects(localMaelstrom);
+            displayObjectPool.UpdateActiveObjects();
         }
 
 
