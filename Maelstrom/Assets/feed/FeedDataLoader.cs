@@ -115,7 +115,8 @@ namespace Maelstrom.Unity
 
             _data = dataList.ToArray();
             NormalizeData();
-            DumpNormalizedDataToCSV();
+            if (Config.Get("dataDump", false))
+                DumpNormalizedDataToCSV();
             _dataLoaded = true;
 
             AppLogger.Log($"Data Loaded: {_data.Length} data points");

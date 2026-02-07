@@ -18,8 +18,6 @@ namespace Maelstrom.Unity
 
         private static readonly float HIGH_MAELSTROM_THRESHOLD = 0.99f;
         private static readonly float MEDIUM_MAELSTROM_THRESHOLD = 0.94f;
-
-
         private static float currentMaelstrom;
         private static float targetMaelstrom;
 
@@ -46,6 +44,13 @@ namespace Maelstrom.Unity
             { RoleId.GhostNet, false },
             { RoleId.Feed, false }
         };
+
+        private static float _currentRatio;
+
+        public static float GetCurrentRatio()
+        {
+            return _currentRatio;
+        }
 
         private static void setTarget(float val)
         {
@@ -198,8 +203,9 @@ namespace Maelstrom.Unity
             }
         }
 
-        public static float UpdateMaelstrom(float currentRatio, double netRnd = 0f)
+        public static float UpdateMaelstrom(float currentRatio, double netRnd = 0f, bool silent = false)
         {
+            _currentRatio = currentRatio;
             var externalMaelstromsValues = GetExternalMaelstroms();
             var externalMaestrom = externalMaelstromsValues.Length > 0
                 ? externalMaelstromsValues.Sum() / externalMaelstromsValues.Length
@@ -212,42 +218,45 @@ namespace Maelstrom.Unity
                 if (influencedRnd >= HIGH_MAELSTROM_THRESHOLD)
                 {
                     setTarget(1f);
-                    AppLogger.Log(
-                        $"BIG Rnd(${netRnd:F3}/Ext(${externalMaestrom:F2})/ => Inf(${influencedRnd:F2}) > ${HIGH_MAELSTROM_THRESHOLD}) ");
+                    if (!silent)
+                        AppLogger.Log(
+                            $"BIG Rnd(${netRnd:F3}/Ext(${externalMaestrom:F2})/ => Inf(${influencedRnd:F2}) > ${HIGH_MAELSTROM_THRESHOLD}) ");
                 }
                 else if (influencedRnd >= MEDIUM_MAELSTROM_THRESHOLD)
                 {
                     setTarget(0.7f);
-                    AppLogger.Log(
-                        $"BIG Rnd(${netRnd:F3}/Ext(${externalMaestrom:F2})/ => Inf(${influencedRnd:F2}) > ${MEDIUM_MAELSTROM_THRESHOLD}) ");
+                    if (!silent)
+                        AppLogger.Log(
+                            $"BIG Rnd(${netRnd:F3}/Ext(${externalMaestrom:F2})/ => Inf(${influencedRnd:F2}) > ${MEDIUM_MAELSTROM_THRESHOLD}) ");
                 }
                 else
                 {
-                    setTarget(currentRatio + externalMaestrom * 0.3f);
-                    AppLogger.Log(
-                        $"Maelstrom crt{currentRatio:F2}, tgt{targetMaelstrom:F2}, ext({externalMaestrom:F2}) rdn:{netRnd:F2}");
+                    setTarget(_currentRatio + externalMaestrom * 0.3f);
+                    if (!silent)
+                        AppLogger.Log(
+                            $"Maelstrom crt{_currentRatio:F2}, tgt{targetMaelstrom:F2}, ext({externalMaestrom:F2}) rdn:{netRnd:F2}");
                 }
             }
 
-            BroadcastCurrentValues(currentRatio);
+            if (!silent)
+                BroadcastCurrentValues(_currentRatio);
+
             return currentMaelstrom;
         }
 
 
-        public static float ProgressMaelstrom(float speedModifier = 1.0f)
+        public static float ProgressMaelstrom(float speedModifier = 1.0f, bool silent = false)
         {
-            // Check if any previous maelstrom values were above 0.6
             var hasHighPreviousValues = targetMaelstromHistory.Any(value => value >= 0.6f);
 
-            // Use inertia only if previous values were above 0.6
             var lerpSpeed = (hasHighPreviousValues ? 0.001f : 0.01f) * speedModifier;
             currentMaelstrom = Mathf.Lerp(currentMaelstrom, targetMaelstrom, lerpSpeed);
 
-            // Store current maelstrom in history (keep max 100 values)
             targetMaelstromHistory.Enqueue(targetMaelstrom);
             if (targetMaelstromHistory.Count > 100) targetMaelstromHistory.Dequeue();
 
-            BroadcastCurrentMaelstrom();
+            if (!silent)
+                BroadcastCurrentMaelstrom();
 
             return currentMaelstrom;
         }
@@ -256,6 +265,36 @@ namespace Maelstrom.Unity
         private static float Clamp01(float v)
         {
             return v < 0f ? 0f : v > 1f ? 1f : v;
+        }
+
+        /// <summary>
+        ///     Returns the current target maelstrom value
+        /// </summary>
+        public static float GetTargetMaelstrom()
+        {
+            return targetMaelstrom;
+        }
+
+        /// <summary>
+        ///     Returns the current maelstrom value (lerped towards target)
+        /// </summary>
+        public static float GetCurrentMaelstrom()
+        {
+            return currentMaelstrom;
+        }
+
+        /// <summary>
+        ///     Resets the maelstrom state for clean simulation runs
+        /// </summary>
+        public static void Reset()
+        {
+            currentMaelstrom = 0f;
+            targetMaelstrom = 0f;
+            targetMaelstromHistory.Clear();
+            externalMaelstroms.Clear();
+            updateCount = 0;
+
+            foreach (var key in overrides.Keys.ToList()) overrides[key] = false;
         }
     }
 }

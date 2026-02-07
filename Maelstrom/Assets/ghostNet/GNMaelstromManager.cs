@@ -1,8 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using UnityEngine;
 using Random = System.Random;
 
 namespace Maelstrom.Unity
@@ -19,6 +15,11 @@ namespace Maelstrom.Unity
         private float currentMaelstrom;
         private int maxAccountCount;
         private int minAccountCount = int.MaxValue;
+
+        public float GetCurrentRatio()
+        {
+            return CommonMaelstrom.GetCurrentRatio();
+        }
 
         /// <summary>
         ///     Register data bounds during initial data loading to understand the data shape
@@ -54,33 +55,39 @@ namespace Maelstrom.Unity
         }
 
         /// <summary>
-        ///     Register individual data points for real-time processing
+        ///     Register individual data points for real-time processing.
+        ///     Returns the currentRatio (normalized account count).
         /// </summary>
-        public void RegisterData(GhostNetDataPoint data)
+        public void RegisterData(GhostNetDataPoint data, bool silent = false)
         {
             if (!boundsRegistered) throw new SystemException("no bound to compare maelstrom");
 
             var newDate = data.date.Date;
             var isNewDay = newDate != currentDate;
 
-            //aggregated data is processed by particle system
             if (!data.isAggregated) currentAccountCount += 1;
 
             var normalizedAccountCount = currentAccountCount / (float)maxAccountCount;
+            // soft log linearization (boosts low values, saturates high ones)
+            const float k = 50f; // tune: 10 = mild, 30 = strong, 50 = very strong
+            var linearizedRatio =
+                (float)(Math.Log10(1 + k * normalizedAccountCount) / Math.Log10(1 + k));
 
             if (isNewDay)
             {
-                AppLogger.Log($"Account tweeting:{currentAccountCount}/{maxAccountCount}");
-                currentMaelstrom = CommonMaelstrom.UpdateMaelstrom(normalizedAccountCount, rnd.NextDouble());
+                if (!silent)
+                    AppLogger.Log($"Account tweeting:{currentAccountCount}/{maxAccountCount}");
+
+                currentMaelstrom = CommonMaelstrom.UpdateMaelstrom(linearizedRatio, rnd.NextDouble(), silent);
 
                 currentDate = newDate;
                 currentAccountCount = 0;
             }
         }
 
-        public void Update()
+        public void Update(bool silent = false)
         {
-            currentMaelstrom = CommonMaelstrom.ProgressMaelstrom();
+            currentMaelstrom = CommonMaelstrom.ProgressMaelstrom(silent: silent);
         }
 
         /// <summary>
@@ -92,62 +99,13 @@ namespace Maelstrom.Unity
         }
 
         /// <summary>
-        ///     Process full dataset with RegisterData and dump maelstrom results to CSV
+        ///     Reset the maelstrom manager state for clean simulation runs
         /// </summary>
-        public void SimulateAndDumpDailyMaelstrom(GhostNetDataPoint[] data)
+        public void Reset()
         {
-            if (!boundsRegistered)
-            {
-                AppLogger.LogError("Cannot simulate maelstrom: bounds not registered");
-                return;
-            }
-
-            try
-            {
-                // Create a temporary maelstrom manager for simulation
-                var simulationMaelstrom = new GNMaelstromManager();
-                simulationMaelstrom.RegisterDataBounds(data);
-
-                // Sort data chronologically
-                var sortedData = data.OrderBy(dp => dp.date).ToArray();
-
-                // Store maelstrom values for each data point
-                var maelstromResults = new List<(DateTime date, int accountCount, float maelstromValue)>();
-
-                // Process each data point chronologically
-                foreach (var dataPoint in sortedData)
-                {
-                    simulationMaelstrom.RegisterData(dataPoint);
-
-                    // Store the maelstrom value after processing this data point
-                    for (var i = 0; i < 1000; i++) simulationMaelstrom.Update();
-                    maelstromResults.Add((
-                        dataPoint.date,
-                        dataPoint.nb_accounts_others,
-                        simulationMaelstrom.GetCurrentMaelstrom()
-                    ));
-                }
-
-                var fileName = $"ghostNet_maelstrom_results_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
-                var filePath = Path.Combine(Application.dataPath, "..", fileName);
-
-                using (var writer = new StreamWriter(filePath))
-                {
-                    // Write header
-                    writer.WriteLine("date;accountCount;maelstromValue");
-
-                    // Write data for each data point
-                    foreach (var result in maelstromResults)
-                        writer.WriteLine(
-                            $"{result.date:yyyy-MM-dd HH:mm:ss};{result.accountCount};{result.maelstromValue:F6}");
-                }
-
-                AppLogger.Log($"GhostNet maelstrom results dumped to: {filePath}");
-            }
-            catch (Exception ex)
-            {
-                AppLogger.LogError($"Failed to simulate and dump GhostNet maelstrom results: {ex.Message}");
-            }
+            currentAccountCount = 0;
+            currentDate = DateTime.MinValue;
+            currentMaelstrom = 0f;
         }
     }
 }
