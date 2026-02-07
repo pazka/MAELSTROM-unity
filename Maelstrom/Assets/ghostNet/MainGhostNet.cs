@@ -48,6 +48,7 @@ namespace Maelstrom.Unity
         private int _dataIndexStartForCurrentDate;
         private Dictionary<DateTime, (int startIndex, int count)> _dataRangeByDate;
         private float _dayProgress; // 0 to 1, progress through current day
+        private float _dayProgressAtLastSpawn;
         private bool _hasLooped;
         private int _loopDuration;
         private int _nbDataSpawnedForThisDate;
@@ -82,6 +83,15 @@ namespace Maelstrom.Unity
             _currentTime = startPosition * _loopDuration;
             _currentNormalizedTime = startPosition;
             _currentDay = GetCurrentDayFromNormalizedTime(startPosition);
+
+            if (dataLoader.IsDataLoaded && _dataRangeByDate != null &&
+                _dataRangeByDate.TryGetValue(_currentDay.Date, out var range))
+            {
+                _dataIndexStartForCurrentDate = range.startIndex;
+                _targetDataToSpawnForThisDate = range.count;
+                _nbDataSpawnedForThisDate = 0;
+                _dayProgressAtLastSpawn = 0f;
+            }
         }
 
         private void Update()
@@ -96,6 +106,7 @@ namespace Maelstrom.Unity
             {
                 _currentTime = 0;
                 _currentNormalizedTime = 0;
+                _dataIndex = 0;
                 _hasLooped = true;
             }
 
@@ -169,15 +180,7 @@ namespace Maelstrom.Unity
         {
             AppLogger.Log($"New day : {targetDay:yyyy-MM-dd}");
             // Clear all active objects when looping to prevent accumulation
-            if (_hasLooped)
-            {
-                AppLogger.Log(
-                    $"LOOP DETECTED: Clearing {displayObjectPool.GetActiveObjectCount()} active objects and resetting data index");
-                // displayObjectPool.ClearAllActiveObjects();
-
-                _dataIndex = 0;
-            }
-            else
+            if (!_hasLooped)
             {
                 if (!_dataRangeByDate.TryGetValue(targetDay.Date, out var range))
                 {
@@ -189,10 +192,9 @@ namespace Maelstrom.Unity
                 _targetDataToSpawnForThisDate = range.count;
             }
 
-            AppLogger.Log($"Data to spawn for this day : {_targetDataToSpawnForThisDate}");
-
             _currentDay = targetDay;
             _nbDataSpawnedForThisDate = 0;
+            _dayProgressAtLastSpawn = 0f;
 
             // Clear particle system when changing days
             if (particles != null) particles.Stop();
@@ -255,13 +257,12 @@ namespace Maelstrom.Unity
         {
             if (_targetDataToSpawnForThisDate == 0) return;
 
-            var targetSpawnedCount = Mathf.RoundToInt(currentDayProgress * _targetDataToSpawnForThisDate);
-            var currentMaelstrom = maelstrom.GetCurrentMaelstrom();
+            var deltaProgress = Mathf.Max(0f, currentDayProgress - _dayProgressAtLastSpawn);
+            var toSpawnThisTime = Mathf.RoundToInt(deltaProgress * _targetDataToSpawnForThisDate);
+            toSpawnThisTime = Mathf.Min(toSpawnThisTime, _targetDataToSpawnForThisDate - _nbDataSpawnedForThisDate);
 
-            AppLogger.Log(
-                $"SPAWNING {targetSpawnedCount} data points = {_targetDataToSpawnForThisDate} * {currentDayProgress:F2}");
-            while (_nbDataSpawnedForThisDate < targetSpawnedCount &&
-                   _nbDataSpawnedForThisDate < _targetDataToSpawnForThisDate)
+            var currentMaelstrom = maelstrom.GetCurrentMaelstrom();
+            for (var i = 0; i < toSpawnThisTime; i++)
             {
                 var dataPoint = _data[_dataIndexStartForCurrentDate + _nbDataSpawnedForThisDate];
 
@@ -280,6 +281,10 @@ namespace Maelstrom.Unity
                 _nbDataSpawnedForThisDate++;
                 _dataIndex = _dataIndexStartForCurrentDate + _nbDataSpawnedForThisDate;
             }
+
+            _dayProgressAtLastSpawn = _targetDataToSpawnForThisDate > 0
+                ? _nbDataSpawnedForThisDate / (float)_targetDataToSpawnForThisDate
+                : currentDayProgress;
         }
     }
 }
