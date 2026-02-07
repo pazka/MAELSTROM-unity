@@ -14,7 +14,7 @@ namespace Maelstrom.Unity
         private Vector2 screenSize = new(1920, 1080);
 
         [SerializeField] private GhostNetDisplayObjectPool displayObjectPool;
-        [SerializeField] private ParticleSystem particles;
+        [SerializeField] private ParticleSystemPool particlePool;
 
         [Header("Data Settings")] [SerializeField]
         private GhostNetDataLoader dataLoader;
@@ -196,8 +196,8 @@ namespace Maelstrom.Unity
             _nbDataSpawnedForThisDate = 0;
             _dayProgressAtLastSpawn = 0f;
 
-            // Clear particle system when changing days
-            if (particles != null) particles.Stop();
+            if (particlePool != null)
+                particlePool.StopAll();
         }
 
         // used to determine when have passed a new day precomputed,
@@ -268,9 +268,7 @@ namespace Maelstrom.Unity
 
                 if (dataPoint.screen_name == "##OTHERS##")
                 {
-                    GhostNetParticleManager.ConfigureParticleSystem(particles, dataPoint.nb_accounts_others,
-                        currentMaelstrom);
-                    particles.Play();
+                    particlePool.SpawnDataPoints(dataPoint.nb_accounts_others, currentMaelstrom);
                 }
                 else
                 {
