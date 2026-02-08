@@ -44,6 +44,7 @@ namespace Maelstrom.Unity
             if (tmpAccountCount < minAccountCount) minAccountCount = tmpAccountCount;
             if (tmpAccountCount > maxAccountCount) maxAccountCount = tmpAccountCount;
 
+            maxAccountCount = 2000;
             boundsRegistered = true;
             AppLogger.Log(
                 $"GhostNet Maelstrom bounds registered - Min accounts: {minAccountCount}, Max accounts: {maxAccountCount}");
@@ -64,10 +65,12 @@ namespace Maelstrom.Unity
 
             var normalizedAccountCount = currentAccountCount / (float)maxAccountCount;
             // soft log linearization (boosts low values, saturates high ones)
-            const float k = 50f; // tune: 10 = mild, 30 = strong, 50 = very strong
-            var linearizedRatio =
-                (float)(Math.Log10(1 + k * normalizedAccountCount) / Math.Log10(1 + k));
+            const float k = 10; // tune: 10 = mild, 30 = strong, 50 = very strong
+            var x = CommonMaelstrom.Clamp01(normalizedAccountCount);
 
+            // var linearizedRatio =
+            //     (float)(Math.Log10(1 + k * x) / Math.Log10(1 + k));
+            var linearizedRatio = x;
             if (isNewDay)
             {
                 if (!silent)
@@ -82,7 +85,7 @@ namespace Maelstrom.Unity
 
         public void Update(bool silent = false)
         {
-            currentMaelstrom = CommonMaelstrom.ProgressMaelstrom(silent: silent);
+            currentMaelstrom = CommonMaelstrom.ProgressMaelstrom(3f, silent);
         }
 
         /// <summary>

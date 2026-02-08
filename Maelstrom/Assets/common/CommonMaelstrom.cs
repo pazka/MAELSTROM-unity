@@ -281,7 +281,7 @@ namespace Maelstrom.Unity
         }
 
 
-        private static float Clamp01(float v)
+        public static float Clamp01(float v)
         {
             return v < 0f ? 0f : v > 1f ? 1f : v;
         }
