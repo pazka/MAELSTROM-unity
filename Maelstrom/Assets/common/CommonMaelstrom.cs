@@ -62,7 +62,7 @@ namespace Maelstrom.Unity
             if (!isOverwrote || overwrite)
             {
                 previousTargetMaelstrom = currentMaelstrom;
-                targetMaelstrom = val;
+                targetMaelstrom = Clamp01(val);
             }
         }
 
@@ -263,7 +263,7 @@ namespace Maelstrom.Unity
         public static float ProgressMaelstrom(float speedModifier = 1.0f, bool silent = false)
         {
             var hasHighPreviousValues = targetMaelstromHistory.Any(value => value > 0.7);
-            const float defaultSeps = 1600f;
+            var defaultSeps = 1600f / speedModifier;
             var steps = hasHighPreviousValues ? defaultSeps * 3 : defaultSeps;
             var maelstromProgress = targetMaelstromHistory.Count(value => value == targetMaelstrom) / steps;
 
