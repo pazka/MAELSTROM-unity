@@ -229,7 +229,8 @@ namespace Maelstrom.Unity
             if (closeToTarget || bigRatio)
             {
                 AppLogger.Log(
-                    $"Will try Maelstrom : curr{_currentRatio:F2}, tgt{targetMaelstrom:F2}, ext({externalMaestrom:F2})*{_externalMaelstromInfluence:F2} rdn:{netRnd:F2}, infRnd({influencedRnd:F2})");
+                    $"Will try Maelstrom // curr{_currentRatio:F2},rdn:{netRnd:F2}\next({externalMaestrom:F2})*{_externalMaelstromInfluence:F2} // InflRatio({influencedRatio:F2}) ,infRnd({influencedRnd:F2})");
+
                 if (influencedRnd >= HIGH_MAELSTROM_THRESHOLD && influencedRatio > _limitToTryMaelstrom)
                 {
                     SetTarget(1f);
@@ -248,7 +249,7 @@ namespace Maelstrom.Unity
                 {
                     SetTarget(influencedRatio);
                     if (!silent)
-                        AppLogger.Log($"NORMAL(ratio influenced : {influencedRatio:F2}");
+                        AppLogger.Log($"NORMAL(ratio influenced {influencedRatio}");
                 }
             }
 
@@ -270,8 +271,8 @@ namespace Maelstrom.Unity
 
             targetMaelstromHistory.Enqueue(targetMaelstrom);
             currentMaelstromHistory.Enqueue(currentMaelstrom);
-            if (targetMaelstromHistory.Count > steps) targetMaelstromHistory.Dequeue();
-            if (currentMaelstromHistory.Count > steps) currentMaelstromHistory.Dequeue();
+            while (targetMaelstromHistory.Count > steps) targetMaelstromHistory.Dequeue();
+            while (currentMaelstromHistory.Count > steps) currentMaelstromHistory.Dequeue();
 
             if (!silent)
                 BroadcastCurrentMaelstrom();
