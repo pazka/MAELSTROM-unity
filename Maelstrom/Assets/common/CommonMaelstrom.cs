@@ -19,9 +19,11 @@ namespace Maelstrom.Unity
         private static readonly float HIGH_MAELSTROM_THRESHOLD = 0.99f;
         private static readonly float MEDIUM_MAELSTROM_THRESHOLD = 0.94f;
         private static float currentMaelstrom;
+        private static float previousTargetMaelstrom;
         private static float targetMaelstrom;
 
         private static readonly Queue<float> targetMaelstromHistory = new();
+        private static readonly Queue<float> currentMaelstromHistory = new();
 
         // Network Integration
         private static bool _isInitialized;
@@ -46,15 +48,22 @@ namespace Maelstrom.Unity
         };
 
         private static float _currentRatio;
+        private static float _externalMaelstromInfluence;
+        private static float _limitToTryMaelstrom;
 
         public static float GetCurrentRatio()
         {
             return _currentRatio;
         }
 
-        private static void setTarget(float val)
+        private static void SetTarget(float val, bool overwrite = false)
         {
-            if (!overrides[localRoleId]) targetMaelstrom = val;
+            var isOverwrote = overrides[localRoleId];
+            if (!isOverwrote || overwrite)
+            {
+                previousTargetMaelstrom = currentMaelstrom;
+                targetMaelstrom = val;
+            }
         }
 
 
@@ -89,6 +98,8 @@ namespace Maelstrom.Unity
             if (_isInitialized) return;
 
             localRoleId = roleId;
+            _externalMaelstromInfluence = Config.Get("externalMaelstromInfluence", 0.3f);
+            _limitToTryMaelstrom = Config.Get("limitToTryMaelstrom", 0.2f);
             _isInitialized = true;
 
             NetworkManager.Instance.ListenNetwork<FloatData>(DataTag.CurrentMaelstromValue,
@@ -133,7 +144,7 @@ namespace Maelstrom.Unity
             else
                 overrides[data.RoleId] = false;
 
-            if (data.RoleId == localRoleId) targetMaelstrom = data.Value;
+            if (data.RoleId == localRoleId) SetTarget(data.Value, true);
             else externalMaelstroms[data.RoleId] = data.Value;
         }
 
@@ -210,31 +221,34 @@ namespace Maelstrom.Unity
             var externalMaestrom = externalMaelstromsValues.Length > 0
                 ? externalMaelstromsValues.Sum() / externalMaelstromsValues.Length
                 : 0f;
-            var influencedRnd = netRnd + externalMaestrom * 0.3;
+            var influencedRnd = netRnd + externalMaestrom * _externalMaelstromInfluence;
+            var influencedRatio = _currentRatio + externalMaestrom * _externalMaelstromInfluence;
 
             var closeToTarget = Math.Abs(targetMaelstrom - currentMaelstrom) < 0.002f;
-            if (closeToTarget)
+            var bigRatio = currentRatio > 0.8;
+            if (closeToTarget || bigRatio)
             {
-                if (influencedRnd >= HIGH_MAELSTROM_THRESHOLD)
+                AppLogger.Log(
+                    $"Will try Maelstrom : curr{_currentRatio:F2}, tgt{targetMaelstrom:F2}, ext({externalMaestrom:F2})*{_externalMaelstromInfluence:F2} rdn:{netRnd:F2}, infRnd({influencedRnd:F2})");
+                if (influencedRnd >= HIGH_MAELSTROM_THRESHOLD && influencedRatio > _limitToTryMaelstrom)
                 {
-                    setTarget(1f);
+                    SetTarget(1f);
                     if (!silent)
                         AppLogger.Log(
-                            $"BIG Rnd(${netRnd:F3}/Ext(${externalMaestrom:F2})/ => Inf(${influencedRnd:F2}) > ${HIGH_MAELSTROM_THRESHOLD}) ");
+                            $"BIG Inf(${influencedRnd:F2}) > ${HIGH_MAELSTROM_THRESHOLD}) ");
                 }
-                else if (influencedRnd >= MEDIUM_MAELSTROM_THRESHOLD)
+                else if (influencedRnd >= MEDIUM_MAELSTROM_THRESHOLD && influencedRatio > _limitToTryMaelstrom)
                 {
-                    setTarget(0.7f);
+                    SetTarget(0.7f);
                     if (!silent)
                         AppLogger.Log(
-                            $"BIG Rnd(${netRnd:F3}/Ext(${externalMaestrom:F2})/ => Inf(${influencedRnd:F2}) > ${MEDIUM_MAELSTROM_THRESHOLD}) ");
+                            $"MID Inf(${influencedRnd:F2}) > ${MEDIUM_MAELSTROM_THRESHOLD}) ");
                 }
                 else
                 {
-                    setTarget(_currentRatio + externalMaestrom * 0.3f);
+                    SetTarget(influencedRatio);
                     if (!silent)
-                        AppLogger.Log(
-                            $"Maelstrom crt{_currentRatio:F2}, tgt{targetMaelstrom:F2}, ext({externalMaestrom:F2}) rdn:{netRnd:F2}");
+                        AppLogger.Log($"NORMAL(ratio influenced : {influencedRatio:F2}");
                 }
             }
 
@@ -247,13 +261,17 @@ namespace Maelstrom.Unity
 
         public static float ProgressMaelstrom(float speedModifier = 1.0f, bool silent = false)
         {
-            var hasHighPreviousValues = targetMaelstromHistory.Any(value => value >= 0.6f);
+            var hasHighPreviousValues = targetMaelstromHistory.Any(value => value > 0.7);
+            const float defaultSeps = 1600f;
+            var steps = hasHighPreviousValues ? defaultSeps * 3 : defaultSeps;
+            var maelstromProgress = targetMaelstromHistory.Count(value => value == targetMaelstrom) / steps;
 
-            var lerpSpeed = (hasHighPreviousValues ? 0.001f : 0.01f) * speedModifier;
-            currentMaelstrom = Mathf.Lerp(currentMaelstrom, targetMaelstrom, lerpSpeed);
+            currentMaelstrom = Mathf.SmoothStep(previousTargetMaelstrom, targetMaelstrom, maelstromProgress);
 
             targetMaelstromHistory.Enqueue(targetMaelstrom);
-            if (targetMaelstromHistory.Count > 100) targetMaelstromHistory.Dequeue();
+            currentMaelstromHistory.Enqueue(currentMaelstrom);
+            if (targetMaelstromHistory.Count > steps) targetMaelstromHistory.Dequeue();
+            if (currentMaelstromHistory.Count > steps) currentMaelstromHistory.Dequeue();
 
             if (!silent)
                 BroadcastCurrentMaelstrom();

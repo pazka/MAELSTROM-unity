@@ -1,6 +1,6 @@
 {
   "loopDuration": 1200,
-  "startPosition": 0.0,
+  "startPosition": 0.98,
   "centerPositionOffset": [
     0.0,
     0.0
@@ -8,5 +8,7 @@
   "broadastIPv4Adress": "192.168.1.255",
   "multicastIPv6Adress": "ff02::1",
   "simulation": true,
-  "dataDump": false
+  "dataDump": false,
+  "externalMaelstromInfluence": 0.3,
+  "limitToTryMaelstrom": 0.2
 }

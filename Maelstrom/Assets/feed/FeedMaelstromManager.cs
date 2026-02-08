@@ -21,6 +21,7 @@ namespace Maelstrom.Unity
         private int maxRetweetCount;
         private int minRetweetCount = int.MaxValue;
 
+
         /// <summary>
         ///     Register data bounds during initial data loading to understand the data shape
         /// </summary>
@@ -59,29 +60,33 @@ namespace Maelstrom.Unity
         }
 
         /// <summary>
-        ///     Register individual data points for real-time processing
+        ///     Register individual data points for real-time processing.
+        ///     Returns the currentRatio (normalized retweet count).
         /// </summary>
-        public void RegisterData(FeedDataPoint data)
+        public void RegisterData(FeedDataPoint data, bool silent = false)
         {
             var newDate = data.date.Date;
             var isNewDay = newDate != currentDate;
 
+            currentRetweetCount += data.retweetCount;
+            var normalizedRetweetCount = currentRetweetCount / (float)maxRetweetCount;
+
             if (isNewDay)
             {
-                currentRetweetCount += data.retweetCount;
-                AppLogger.Log(
-                    $"DATA:{currentRetweetCount / (float)maxRetweetCount:F2}, RT:{currentRetweetCount}/{maxRetweetCount}");
-                currentMaelstrom =
-                    CommonMaelstrom.UpdateMaelstrom(currentRetweetCount / (float)maxRetweetCount, rnd.NextDouble());
+                if (!silent)
+                    AppLogger.Log(
+                        $"DATA:{normalizedRetweetCount:F2}, RT:{currentRetweetCount}/{maxRetweetCount}");
+
+                currentMaelstrom = CommonMaelstrom.UpdateMaelstrom(normalizedRetweetCount, rnd.NextDouble(), silent);
 
                 currentDate = newDate;
                 currentRetweetCount = 0;
             }
         }
 
-        public void Update()
+        public void Update(bool silent = false)
         {
-            currentMaelstrom = CommonMaelstrom.ProgressMaelstrom();
+            currentMaelstrom = CommonMaelstrom.ProgressMaelstrom(silent: silent);
         }
 
         /// <summary>
@@ -122,6 +127,16 @@ namespace Maelstrom.Unity
         public bool IsBoundsRegistered()
         {
             return boundsRegistered;
+        }
+
+        /// <summary>
+        ///     Reset the maelstrom manager state for clean simulation runs
+        /// </summary>
+        public void Reset()
+        {
+            currentRetweetCount = 0;
+            currentDate = DateTime.MinValue;
+            currentMaelstrom = 0f;
         }
 
         /// <summary>

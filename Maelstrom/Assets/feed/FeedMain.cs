@@ -1,7 +1,7 @@
 using System;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using Random = System.Random;
 
 namespace Maelstrom.Unity
 {
@@ -21,25 +21,18 @@ namespace Maelstrom.Unity
 
         [SerializeField] private GameObject positiveCaustics;
 
-        [Header("Debug")] [SerializeField] private bool showDebugInfo = true;
-
-        [SerializeField] private float debugUpdateInterval = 5.0f;
 
         [SerializeField] private PureDataConnector pureDataConnector;
+
         private readonly FeedMaelstromManager maelstrom = new();
-        private int _currentDataIndex;
-
-        private DateTime _currentDisplayedDate = DateTime.MinValue;
-
-        // Timing
-        private float _currentTime;
-
-        // Data management
         private FeedDataPoint[] _data;
+        private bool _initialized;
         private float _lastDebugTime;
-        private float _normalizedDisplayDuration; // One week in normalized data space
-        private Random _random = new();
-        private float loopDuration;
+        private int _loopDuration;
+        private float _normalizedDisplayDuration;
+        private bool _simulationMode;
+
+        private FeedTimeController _timeController;
 
         private void Start()
         {
@@ -53,53 +46,63 @@ namespace Maelstrom.Unity
             if (Display.displays.Length > 1)
                 Display.displays[1].Activate();
 
-            // Initialize UDP service for feed role
-
-            loopDuration = Config.Get("loopDuration", 1200);
-
-            if (dataLoader == null) throw new Exception("DataLoader not found! Please assign a DataLoader component.");
+            if (dataLoader == null)
+                throw new Exception("DataLoader not found! Please assign a DataLoader component.");
 
             if (displayObjectPool == null)
                 throw new Exception(
                     "FeedDisplayObjectPool not found! Please assign a FeedDisplayObjectPool component.");
 
-            // Wait for data to load
+            _loopDuration = Config.Get("loopDuration", 1200);
+            _simulationMode = Config.Get("simulation", false);
+
+            if (_simulationMode)
+            {
+                AppLogger.Log("[FEED_MAIN] Simulation mode enabled - waiting for data...");
+                return;
+            }
+
+            NetworkManager.Instance.Initialize(5003, new[] { 5000, 5001, 5002 });
+            CommonMaelstrom.InitializeWithPureData(CommonMaelstrom.RoleId.Feed, pureDataConnector);
+
             if (dataLoader.IsDataLoaded)
                 InitializeData();
             else
                 AppLogger.Log("Waiting for data to load...");
-
-            NetworkManager.Instance.Initialize(5003, new[] { 5000, 5001, 5002 });
-            CommonMaelstrom.InitializeWithPureData(CommonMaelstrom.RoleId.Feed, pureDataConnector);
         }
 
         private void Update()
         {
             NetworkManager.Instance?.ProcessCallbacks();
-
             if (!dataLoader.IsDataLoaded) return;
 
-            _currentTime += Time.deltaTime;
+            if (_simulationMode)
+            {
+                RunSimulationMode();
+                return;
+            }
 
-            // Process data and manage display objects
+            if (!_initialized)
+            {
+                InitializeData();
+                return;
+            }
+
+
+            _timeController.AdvanceTime(Time.deltaTime);
+
             ProcessDataAndManageObjects();
             maelstrom.Update();
 
-            // Debug output
-            if (showDebugInfo && _currentTime - _lastDebugTime >= debugUpdateInterval)
-            {
-                LogDebugInfo();
-                _lastDebugTime = _currentTime;
-            }
+            NetworkManager.Instance?.SendNetwork(DataTag.CurrentDataDate,
+                new TextData(CommonMaelstrom.RoleId.Feed,
+                    $" Data Index: {_timeController.CurrentDataIndex}/{_data.Length} => {_timeController.CurrentNormalizedTime:F2}({_timeController.CurrentDisplayedDate:yyyy-MM-dd})"));
         }
 
         private void OnDisable()
         {
-            // Called when the object is disabled or when exiting play mode
-            // This helps prevent crashes when stopping in the editor
             try
             {
-                // Clear all active objects when disabling
                 if (displayObjectPool != null) displayObjectPool.ClearAllActiveObjects();
             }
             catch (Exception ex)
@@ -112,10 +115,7 @@ namespace Maelstrom.Unity
         {
             try
             {
-                // Clean up all objects using the display object pool
                 if (displayObjectPool != null) displayObjectPool.ClearPool();
-
-
                 AppLogger.Log($"[FEED_MAIN] Cleanup completed - Pool size: {displayObjectPool?.GetPoolSize() ?? 0}");
             }
             catch (Exception ex)
@@ -124,101 +124,68 @@ namespace Maelstrom.Unity
             }
         }
 
+        private void RunSimulationMode()
+        {
+            _simulationMode = false;
+            AppLogger.Log("[FEED_MAIN] Data loaded - starting simulation...");
+
+            var simulator = new FeedSimulator();
+            simulator.RunSimulation(
+                dataLoader.Data,
+                dataLoader.DataBounds,
+                _loopDuration);
+
+            AppLogger.Log("[FEED_MAIN] Simulation complete - quitting application...");
+
+#if UNITY_EDITOR
+            EditorApplication.isPlaying = false;
+#else
+            Application.Quit();
+#endif
+        }
+
         private void InitializeData()
         {
             _data = dataLoader.Data;
             _normalizedDisplayDuration = dataLoader.GetNormalizedDuration(TimeSpan.FromDays(7));
 
-            // Initialize Maelstrom manager with data bounds
             maelstrom.RegisterDataBounds(_data);
 
-            // Simulate and dump daily maelstrom data to CSV
-            //maelstrom.SimulateAndDumpDailyMaelstrom(_data);
+            var startPosition = Config.Get("startPosition", 0f);
+            _timeController = new FeedTimeController(_loopDuration, startPosition);
 
-            // Initialize DisplayObject pool
             displayObjectPool.Initialize(screenSize);
 
             AppLogger.Log($"Initialized with {_data.Length} data points");
             AppLogger.Log($"One week in normalized data space: {_normalizedDisplayDuration:F6}");
             AppLogger.Log($"DisplayObject pool initialized with {displayObjectPool.GetPoolSize()} objects");
-        }
 
+            _initialized = true;
+        }
 
         private void ProcessDataAndManageObjects()
         {
-            var normalizedCurrentTime = _currentTime / loopDuration;
+            displayObjectPool.RecycleOldObjects(_timeController.CurrentNormalizedTime, _normalizedDisplayDuration);
 
-            // First, recycle objects that are too old
-            displayObjectPool.RecycleOldObjects(normalizedCurrentTime, _normalizedDisplayDuration);
+            var dataPointsToProcess = _timeController.GetNbDataPointsToProcess(_data,
+                displayObjectPool.MaxActiveObjects - displayObjectPool.GetActiveObjectCount());
 
-            // Then, activate objects for new data points
-            ActivateObjectsForNewData(normalizedCurrentTime);
-
-            // Publish current feed maelstrom to network
-            var localMaelstrom = maelstrom.GetCurrentMaelstrom();
-
-            displayObjectPool.UpdateActiveObjects(localMaelstrom);
-        }
-
-        private void ActivateObjectsForNewData(float normalizedCurrentTime)
-        {
             var maelstromValue = maelstrom.GetCurrentMaelstrom();
-            // Activate objects for new data points
-            while (_currentDataIndex < _data.Length &&
-                   displayObjectPool.GetActiveObjectCount() < displayObjectPool.MaxActiveObjects)
+
+            for (var i = 0; i < dataPointsToProcess; i++)
             {
-                var dataPoint = _data[_currentDataIndex];
+                var dataIdx = _timeController.GetDataIndexForProcess(i);
+                if (dataIdx >= _data.Length) continue;
 
-                // Check if this data point should be displayed at current time
-                if (dataPoint.normalizedDate <= normalizedCurrentTime)
-                {
-                    // Register data with maelstrom manager for daily retweet counting
-                    maelstrom.RegisterData(dataPoint);
-
-                    displayObjectPool.ActivateDataPoint(dataPoint, normalizedCurrentTime, maelstromValue);
-                    _currentDisplayedDate = dataPoint.date;
-                    _currentDataIndex++;
-                }
-                else
-                {
-                    // Data point is in the future, wait
-                    break;
-                }
+                var dataPoint = _data[dataIdx];
+                maelstrom.RegisterData(dataPoint);
+                displayObjectPool.ActivateDataPoint(dataPoint, _timeController.CurrentNormalizedTime, maelstromValue);
+                _timeController.MarkDataProcessed(_data[dataIdx]);
             }
+
 
             positiveCaustics.GetComponent<Renderer>().material.SetFloat("_Maelstrom", maelstromValue);
-
-            // If we've reached the end of data, loop back to start
-            if (_currentDataIndex >= _data.Length)
-            {
-                _currentDataIndex = 0;
-                // Reset the time to start a new loop
-                _currentTime = 0.0f;
-            }
-        }
-
-
-        private void LogDebugInfo()
-        {
-            var normalizedCurrentTime = _currentTime / loopDuration;
-            // AppLogger.Log(
-            //     $"Active Objects: {displayObjectPool.GetActiveObjectCount()})");
-
-            // Log recycling stats
-            // AppLogger.Log($"Recycling Stats - Active: {displayObjectPool.GetActiveObjectCount()}, " +
-            //               $"Inactive Queue: {displayObjectPool.GetInactiveObjectCount()}, " +
-            //               $"Pool Size: {displayObjectPool.GetPoolSize()}");
-
-
-            // Log current date being displayed
-            NetworkManager.Instance.SendNetwork(DataTag.CurrentDataDate,
-                new TextData(CommonMaelstrom.RoleId.Feed,
-                    $" Data Index: {_currentDataIndex}/{_data.Length} => {normalizedCurrentTime:F2}({_currentDisplayedDate:yyyy-MM-dd})"));
-
-            // Log maelstrom information
-            // AppLogger.Log(
-            //     $"Current Day Retweets: {maelstrom.GetCurrentRetweetCount()}, " +
-            //     $"Bounds: {maelstrom.GetMinRetweetCount()}-{maelstrom.GetMaxRetweetCount()}");
+            displayObjectPool.UpdateActiveObjects(maelstromValue);
         }
     }
 }

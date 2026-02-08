@@ -1,4 +1,5 @@
 using System;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -18,23 +19,16 @@ namespace Maelstrom.Unity
         [Header("Data Settings")] [SerializeField]
         private GhostNetDataLoader dataLoader;
 
-        [Header("Debug")] [SerializeField] private bool showDebugInfo = true;
-        [SerializeField] private float debugUpdateInterval = 5.0f;
-
-        [Header("Performance Settings")] [SerializeField]
-        private int maxObjectsPerFrame = 1000;
-        [SerializeField] private int maxObjectsPerSecond = 1000;
-
         [SerializeField] private PureDataConnector pureDataConnector;
-        
+
         private readonly TimeSpan DATA_TTL = TimeSpan.FromDays(3);
         private readonly GNMaelstromManager maelstrom = new();
 
         private GhostNetDataPoint[] _data;
-        private float _normalizedDataTTl;
-        private int _loopDuration;
-        private bool _simulationMode;
         private bool _initialized;
+        private int _loopDuration;
+        private float _normalizedDataTTl;
+        private bool _simulationMode;
 
         private GhostNetTimeController _timeController;
 
@@ -97,6 +91,12 @@ namespace Maelstrom.Unity
             );
         }
 
+        private void OnDestroy()
+        {
+            displayObjectPool.ClearPool();
+            AppLogger.Log($"[GHOSTNET_MAIN] Cleanup completed - Pool size: {displayObjectPool.GetPoolSize()}");
+        }
+
         private void RunSimulationMode()
         {
             _simulationMode = false;
@@ -107,22 +107,16 @@ namespace Maelstrom.Unity
                 dataLoader.Data,
                 dataLoader.DataBounds,
                 _loopDuration,
-                targetLoops: 2,
-                targetFps: 30);
+                2,
+                30);
 
             AppLogger.Log("[GHOSTNET_MAIN] Simulation complete - quitting application...");
 
 #if UNITY_EDITOR
-            UnityEditor.EditorApplication.isPlaying = false;
+            EditorApplication.isPlaying = false;
 #else
             Application.Quit();
 #endif
-        }
-
-        private void OnDestroy()
-        {
-            displayObjectPool.ClearPool();
-            AppLogger.Log($"[GHOSTNET_MAIN] Cleanup completed - Pool size: {displayObjectPool.GetPoolSize()}");
         }
 
         private void InitializeData()
@@ -147,7 +141,7 @@ namespace Maelstrom.Unity
             AppLogger.Log($"[GHOSTNET_MAIN] CenterOffset: {centerOffset}");
             displayObjectPool.Initialize(screenSize, new Vector2(centerOffset[0], centerOffset[1]));
             particlePool.Initialize(screenSize, new Vector2(centerOffset[0], centerOffset[1]));
-            
+
             AppLogger.Log($"Initialized ghostNet with {_data.Length} data points");
             AppLogger.Log($"One day in normalized data space: {_normalizedDataTTl:F6}");
             AppLogger.Log($"DisplayObject pool initialized with {displayObjectPool.GetPoolSize()} objects");
@@ -189,7 +183,8 @@ namespace Maelstrom.Unity
                 else
                 {
                     maelstrom.RegisterData(dataPoint);
-                    displayObjectPool.ActivateDataPoint(dataPoint, _timeController.CurrentNormalizedTime, currentMaelstrom);
+                    displayObjectPool.ActivateDataPoint(dataPoint, _timeController.CurrentNormalizedTime,
+                        currentMaelstrom);
                 }
             }
 

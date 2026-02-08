@@ -16,11 +16,6 @@ namespace Maelstrom.Unity
         private int maxAccountCount;
         private int minAccountCount = int.MaxValue;
 
-        public float GetCurrentRatio()
-        {
-            return CommonMaelstrom.GetCurrentRatio();
-        }
-
         /// <summary>
         ///     Register data bounds during initial data loading to understand the data shape
         /// </summary>

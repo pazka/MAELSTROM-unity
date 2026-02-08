@@ -37,24 +37,29 @@ namespace Maelstrom.Unity
         }
 
         /// <summary>
-        ///     Register individual data points for real-time processing
+        ///     Register individual data points for real-time processing.
+        ///     Returns the currentRatio (normalized negative sentiment).
         /// </summary>
-        public void RegisterData(CoralDataPoint data)
+        public void RegisterData(CoralDataPoint data, bool silent = false)
         {
-            AppLogger.Log($"+:{data.dayNormPos:F2}, /:{data.dayNormNeu:F2}, -:{data.dayNormNeg:F2}");
-            NetworkManager.Instance.SendNetwork(DataTag.CurrentDataDate, new TextData(
-                CommonMaelstrom.RoleId.DeadComunities,
-                $"{data.normalizedDate:F2}({data.date:yyyy-MM-dd})"));
             if (!boundsRegistered) throw new SystemException("no bound to compare maelstrom");
+
+            if (!silent)
+            {
+                AppLogger.Log($"+:{data.dayNormPos:F2}, /:{data.dayNormNeu:F2}, -:{data.dayNormNeg:F2}");
+                NetworkManager.Instance.SendNetwork(DataTag.CurrentDataDate, new TextData(
+                    CommonMaelstrom.RoleId.DeadComunities,
+                    $"{data.normalizedDate:F2}({data.date:yyyy-MM-dd})"));
+            }
+
             currentNegativeSentiment = data.neg;
-            currentMaelstrom =
-                CommonMaelstrom.UpdateMaelstrom(currentNegativeSentiment / maxNegativeSentiment, rnd.NextDouble());
+            var normalizedSentiment = currentNegativeSentiment / maxNegativeSentiment;
+            currentMaelstrom = CommonMaelstrom.UpdateMaelstrom(normalizedSentiment, rnd.NextDouble(), silent);
         }
 
-        public void Update()
+        public void Update(bool silent = false)
         {
-            currentMaelstrom =
-                CommonMaelstrom.ProgressMaelstrom();
+            currentMaelstrom = CommonMaelstrom.ProgressMaelstrom(silent: silent);
         }
 
 
@@ -64,6 +69,16 @@ namespace Maelstrom.Unity
         public float GetCurrentMaelstrom()
         {
             return currentMaelstrom;
+        }
+
+        /// <summary>
+        ///     Reset the maelstrom manager state for clean simulation runs
+        /// </summary>
+        public void Reset()
+        {
+            currentNegativeSentiment = 0f;
+            currentDate = DateTime.MinValue;
+            currentMaelstrom = 0f;
         }
 
         /// <summary>
