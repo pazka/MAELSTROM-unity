@@ -79,7 +79,7 @@ namespace Maelstrom.Unity
 
         public void Update(bool silent = false)
         {
-            currentMaelstrom = CommonMaelstrom.ProgressMaelstrom(3f, silent);
+            currentMaelstrom = CommonMaelstrom.ProgressMaelstrom(1f, silent);
         }
 
         /// <summary>

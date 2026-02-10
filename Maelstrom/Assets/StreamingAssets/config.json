@@ -13,7 +13,7 @@
   "dataDump": false,
   "feed_minPointSize": 5,
   "feed_maxPointSize": 400,
-  "maelstrom_transitionSteps": 1600,
+  "maelstrom_transitionSteps": 550,
   "maelstrom_speedModifier": 1,
   "maelstrom_highPrevValueModifier": 3,
   "maelstrom_highPrevValueCriteria": 0.7,

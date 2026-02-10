@@ -74,7 +74,8 @@ namespace Maelstrom.Unity
             if (isNewDay)
             {
                 if (!silent)
-                    AppLogger.Log($"Account tweeting:{currentAccountCount}/{maxAccountCount}");
+                    AppLogger.Log(
+                        $"DATA: {x}, altered,{linearizedRatio} Account tweeting:{currentAccountCount}/{maxAccountCount}");
 
                 currentMaelstrom = CommonMaelstrom.UpdateMaelstrom(linearizedRatio, rnd.NextDouble(), silent);
 
@@ -85,7 +86,7 @@ namespace Maelstrom.Unity
 
         public void Update(bool silent = false)
         {
-            currentMaelstrom = CommonMaelstrom.ProgressMaelstrom(3f, silent);
+            currentMaelstrom = CommonMaelstrom.ProgressMaelstrom(1f, silent);
         }
 
         /// <summary>

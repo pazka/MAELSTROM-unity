@@ -50,9 +50,9 @@ namespace Maelstrom.Unity
         private static float _currentRatio;
         private static float _externalMaelstromInfluence;
         private static float _limitToTryMaelstrom;
-        private static float _transitionSteps = 1600f;
+        private static float _transitionSteps = 550f;
         private static float _speedModifier = 1f;
-        private static float _highPrevValueModifier = 1f;
+        private static float _highPrevValueModifier = 2f;
         private static float _highPrevValueCriteria = 0.7f;
 
         public static float GetCurrentRatio()
@@ -104,7 +104,7 @@ namespace Maelstrom.Unity
             localRoleId = roleId;
             _externalMaelstromInfluence = Config.Get("externalMaelstromInfluence", 0.3f);
             _limitToTryMaelstrom = Config.Get("limitToTryMaelstrom", 0.2f);
-            _transitionSteps = Config.Get("_transitionSteps", 1600f);
+            _transitionSteps = Config.Get("_transitionSteps", 550f);
             _speedModifier = Config.Get("_speedModifier", 1f);
             _highPrevValueModifier = Config.Get("_highPrevValueModifier", 3f);
             _highPrevValueCriteria = Config.Get("maelstrom_highPrevValueCriteria", 0.7f);
