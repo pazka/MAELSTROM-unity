@@ -12,13 +12,15 @@ namespace Maelstrom.Unity
         // Dual circle system
         private readonly Vector2 circleCenter = new(0, 540); // Center of first circle (1920x1080)
         private readonly float circleRadius = 900; // Radius of each circle
+        private readonly GameObject gameObject;
+        private readonly Material material;
+        private readonly Renderer renderer;
         public float createdGameTime;
 
         public float creationTime = 0.0f;
-        private readonly GameObject gameObject;
-        private readonly Material material;
+        private readonly int maxPointSize = 200;
+        private readonly int minPointSize = 25;
         public float normalizedCreationTime;
-        private readonly Renderer renderer;
         private Vector2 velocity;
 
 
@@ -27,6 +29,8 @@ namespace Maelstrom.Unity
             gameObject = pointDisplay;
             renderer = pointDisplay.GetComponent<Renderer>();
             material = renderer.material;
+            minPointSize = Config.Get("feed_minPointSize", 25);
+            maxPointSize = Config.Get("feed_maxPointSize", 200);
             if (renderer == null) throw new Exception("Renderer not found on point display");
         }
 
@@ -47,7 +51,7 @@ namespace Maelstrom.Unity
         {
             Reset();
 
-            this.DataPoint = dataPoint;
+            DataPoint = dataPoint;
             this.normalizedCreationTime = normalizedCreationTime;
             createdGameTime = Time.time;
 
@@ -62,7 +66,7 @@ namespace Maelstrom.Unity
             );
 
             // Size based on retweet count (normalized)
-            var sizeScale = 25 + dataPoint.normalizedRetweetCount * 300; // 25 to 175 pixels
+            var sizeScale = minPointSize + dataPoint.normalizedRetweetCount * maxPointSize;
             var pixelSize = new Vector2(sizeScale, sizeScale);
 
             // Set initial position and scale

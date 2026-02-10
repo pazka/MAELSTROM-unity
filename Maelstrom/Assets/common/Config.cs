@@ -12,6 +12,7 @@ namespace Maelstrom.Unity
     public static class Config
     {
         private static Dictionary<string, object> _data;
+        private static Dictionary<(string, Type), object> _typedCache;
         private static bool _loaded;
 
         private static void EnsureLoaded()
@@ -19,6 +20,7 @@ namespace Maelstrom.Unity
             if (_loaded) return;
 
             _data = new Dictionary<string, object>();
+            _typedCache = new Dictionary<(string, Type), object>();
             _loaded = true;
 
             var path = Path.Combine(Application.streamingAssetsPath, "config.json");
@@ -43,7 +45,7 @@ namespace Maelstrom.Unity
         }
 
         /// <summary>
-        ///     Parse flat JSON { "key": value, ... }. JsonUtility does not support Dictionary, so we use a minimal parser.
+        ///     Parse flat JSON { "key": value, ... }.
         /// </summary>
         private static Dictionary<string, object> ParseFlatJson(string json)
         {
@@ -110,7 +112,6 @@ namespace Maelstrom.Unity
                         end += 2;
                         continue;
                     }
-
                     if (s[end] == '"') break;
                     end++;
                 }
@@ -140,30 +141,12 @@ namespace Maelstrom.Unity
             var j = i;
             while (j < s.Length && s[j] != ',' && s[j] != '}' && s[j] != ']' && !char.IsWhiteSpace(s[j])) j++;
             var raw = s.Substring(i, j - i).Trim();
-            if (raw == "true")
-            {
-                value = true;
-                return j;
-            }
 
-            if (raw == "false")
-            {
-                value = false;
-                return j;
-            }
-
+            if (raw == "true") { value = true; return j; }
+            if (raw == "false") { value = false; return j; }
             if (raw == "null") return j;
-            if (int.TryParse(raw, out var vi))
-            {
-                value = vi;
-                return j;
-            }
-
-            if (float.TryParse(raw, out var vf))
-            {
-                value = vf;
-                return j;
-            }
+            if (int.TryParse(raw, out var vi)) { value = vi; return j; }
+            if (float.TryParse(raw, out var vf)) { value = vf; return j; }
 
             value = raw;
             return j;
@@ -175,34 +158,43 @@ namespace Maelstrom.Unity
         public static T Get<T>(string key, T defaultValue = default)
         {
             EnsureLoaded();
-            if (!_data.TryGetValue(key, out var v)) return defaultValue;
-            if (v == null) return defaultValue;
-            if (v is T t) return t;
 
-            if (typeof(T).IsArray && v is List<object> list)
-            {
-                var elementType = typeof(T).GetElementType();
-                var array = Array.CreateInstance(elementType, list.Count);
-                for (var i = 0; i < list.Count; i++)
-                {
-                    try
-                    {
-                        var element = list[i];
-                        array.SetValue(element.GetType() == elementType 
-                            ? element 
-                            : Convert.ChangeType(element, elementType), i);
-                    }
-                    catch
-                    {
-                        AppLogger.LogWarning($"Config array '{key}' element {i} could not be converted to {elementType.Name}.");
-                    }
-                }
-                return (T)(object)array;
-            }
+            var cacheKey = (key, typeof(T));
+            if (_typedCache.TryGetValue(cacheKey, out var cached))
+                return (T)cached;
+
+            if (!_data.TryGetValue(key, out var v) || v == null)
+                return defaultValue;
 
             try
             {
-                return (T)Convert.ChangeType(v, typeof(T));
+                T result;
+
+                if (v is T t)
+                {
+                    result = t;
+                }
+                else if (typeof(T).IsArray && v is List<object> list)
+                {
+                    var elementType = typeof(T).GetElementType();
+                    var array = Array.CreateInstance(elementType, list.Count);
+                    for (var i = 0; i < list.Count; i++)
+                    {
+                        array.SetValue(
+                            list[i].GetType() == elementType
+                                ? list[i]
+                                : Convert.ChangeType(list[i], elementType),
+                            i);
+                    }
+                    result = (T)(object)array;
+                }
+                else
+                {
+                    result = (T)Convert.ChangeType(v, typeof(T));
+                }
+
+                _typedCache[cacheKey] = result;
+                return result;
             }
             catch
             {
@@ -217,45 +209,39 @@ namespace Maelstrom.Unity
         public static T[] GetArray<T>(string key, T[] defaultValue = null)
         {
             EnsureLoaded();
-            if (!_data.TryGetValue(key, out var v)) return defaultValue ?? Array.Empty<T>();
-            if (v is not List<object> list) return defaultValue ?? Array.Empty<T>();
+
+            var cacheKey = (key, typeof(T[]));
+            if (_typedCache.TryGetValue(cacheKey, out var cached))
+                return (T[])cached;
+
+            if (!_data.TryGetValue(key, out var v) || v is not List<object> list)
+                return defaultValue ?? Array.Empty<T>();
 
             var result = new T[list.Count];
             for (var i = 0; i < list.Count; i++)
             {
-                var element = list[i];
-                if (element is T t)
-                {
-                    result[i] = t;
-                    continue;
-                }
-
                 try
                 {
-                    result[i] = (T)Convert.ChangeType(element, typeof(T));
+                    result[i] = list[i] is T t
+                        ? t
+                        : (T)Convert.ChangeType(list[i], typeof(T));
                 }
                 catch
                 {
                     AppLogger.LogWarning($"Config array '{key}' element {i} could not be converted to {typeof(T).Name}.");
-                    result[i] = default;
                 }
             }
 
+            _typedCache[cacheKey] = result;
             return result;
         }
 
-        /// <summary>
-        ///     True if the key exists in config.
-        /// </summary>
         public static bool HasKey(string key)
         {
             EnsureLoaded();
             return _data.ContainsKey(key);
         }
 
-        /// <summary>
-        ///     All config keys.
-        /// </summary>
         public static string[] GetAllKeys()
         {
             EnsureLoaded();
@@ -270,6 +256,7 @@ namespace Maelstrom.Unity
         public static void Reload()
         {
             _loaded = false;
+            _typedCache?.Clear();
             EnsureLoaded();
         }
     }

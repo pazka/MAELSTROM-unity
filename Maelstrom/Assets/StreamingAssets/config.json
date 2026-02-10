@@ -1,6 +1,6 @@
 {
   "loopDuration": 1200,
-  "startPosition": 0.98,
+  "startPosition": 0.0,
   "centerPositionOffset": [
     0.0,
     0.0
@@ -10,5 +10,13 @@
   "externalMaelstromInfluence": 0.3,
   "limitToTryMaelstrom": 0.2,
   "simulation": false,
-  "dataDump": false
+  "dataDump": false,
+  "feed_minPointSize": 5,
+  "feed_maxPointSize": 400,
+  "maelstrom_transitionSteps": 1600,
+  "maelstrom_speedModifier": 1,
+  "maelstrom_highPrevValueModifier": 3,
+  "maelstrom_highPrevValueCriteria": 0.7,
+  "maelstrom_highThreshold": 0.99,
+  "maelstrom_mediumThreshold": 0.94
 }

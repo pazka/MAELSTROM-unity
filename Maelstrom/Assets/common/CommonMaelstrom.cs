@@ -16,8 +16,8 @@ namespace Maelstrom.Unity
             Feed = 3
         }
 
-        private static readonly float HIGH_MAELSTROM_THRESHOLD = 0.99f;
-        private static readonly float MEDIUM_MAELSTROM_THRESHOLD = 0.94f;
+        private static float maelstromHighThreshold = 0.99f;
+        private static float maelstromMediumThreshold = 0.94f;
         private static float currentMaelstrom;
         private static float previousTargetMaelstrom;
         private static float targetMaelstrom;
@@ -50,6 +50,10 @@ namespace Maelstrom.Unity
         private static float _currentRatio;
         private static float _externalMaelstromInfluence;
         private static float _limitToTryMaelstrom;
+        private static float _transitionSteps = 1600f;
+        private static float _speedModifier = 1f;
+        private static float _highPrevValueModifier = 1f;
+        private static float _highPrevValueCriteria = 0.7f;
 
         public static float GetCurrentRatio()
         {
@@ -100,6 +104,12 @@ namespace Maelstrom.Unity
             localRoleId = roleId;
             _externalMaelstromInfluence = Config.Get("externalMaelstromInfluence", 0.3f);
             _limitToTryMaelstrom = Config.Get("limitToTryMaelstrom", 0.2f);
+            _transitionSteps = Config.Get("_transitionSteps", 1600f);
+            _speedModifier = Config.Get("_speedModifier", 1f);
+            _highPrevValueModifier = Config.Get("_highPrevValueModifier", 3f);
+            _highPrevValueCriteria = Config.Get("maelstrom_highPrevValueCriteria", 0.7f);
+            maelstromHighThreshold = Config.Get("maelstrom_highThreshold", 0.99f);
+            maelstromMediumThreshold = Config.Get("maelstrom_mediumThreshold", 0.94f);
             _isInitialized = true;
 
             NetworkManager.Instance.ListenNetwork<FloatData>(DataTag.CurrentMaelstromValue,
@@ -231,19 +241,19 @@ namespace Maelstrom.Unity
                 AppLogger.Log(
                     $"Will try Maelstrom // curr{_currentRatio:F2},rdn:{netRnd:F2}\next({externalMaestrom:F2})*{_externalMaelstromInfluence:F2} // InflRatio({influencedRatio:F2}) ,infRnd({influencedRnd:F2})");
 
-                if (influencedRnd >= HIGH_MAELSTROM_THRESHOLD && influencedRatio > _limitToTryMaelstrom)
+                if (influencedRnd >= maelstromHighThreshold && influencedRatio > _limitToTryMaelstrom)
                 {
                     SetTarget(1f);
                     if (!silent)
                         AppLogger.Log(
-                            $"BIG Inf(${influencedRnd:F2}) > ${HIGH_MAELSTROM_THRESHOLD}) ");
+                            $"BIG Inf(${influencedRnd:F2}) > ${maelstromHighThreshold}) ");
                 }
-                else if (influencedRnd >= MEDIUM_MAELSTROM_THRESHOLD && influencedRatio > _limitToTryMaelstrom)
+                else if (influencedRnd >= maelstromMediumThreshold && influencedRatio > _limitToTryMaelstrom)
                 {
                     SetTarget(0.7f);
                     if (!silent)
                         AppLogger.Log(
-                            $"MID Inf(${influencedRnd:F2}) > ${MEDIUM_MAELSTROM_THRESHOLD}) ");
+                            $"MID Inf(${influencedRnd:F2}) > ${maelstromMediumThreshold}) ");
                 }
                 else
                 {
@@ -262,9 +272,9 @@ namespace Maelstrom.Unity
 
         public static float ProgressMaelstrom(float speedModifier = 1.0f, bool silent = false)
         {
-            var hasHighPreviousValues = targetMaelstromHistory.Any(value => value > 0.7);
-            var defaultSeps = 1600f / speedModifier;
-            var steps = hasHighPreviousValues ? defaultSeps * 3 : defaultSeps;
+            var hasHighPreviousValues = targetMaelstromHistory.Any(value => value > _highPrevValueCriteria);
+            var defaultSeps = _transitionSteps / (speedModifier * _speedModifier);
+            var steps = hasHighPreviousValues ? defaultSeps * _highPrevValueModifier : defaultSeps;
             var maelstromProgress = targetMaelstromHistory.Count(value => value == targetMaelstrom) / steps;
 
             currentMaelstrom = Mathf.SmoothStep(previousTargetMaelstrom, targetMaelstrom, maelstromProgress);
