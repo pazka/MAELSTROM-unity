@@ -10,18 +10,21 @@ namespace Maelstrom.Unity
     public class FeedDisplayObject
     {
         // Dual circle system
-        private readonly Vector2 circleCenter = new(0, 540); // Center of first circle (1920x1080)
+        private readonly Vector3 circleCenter = new(0, 540); // Center of first circle (1920x1080)
         private readonly float circleRadius = 900; // Radius of each circle
         private readonly GameObject gameObject;
         private readonly Material material;
+        private readonly int maxPointSize = 200;
+        private readonly int minPointSize = 25;
         private readonly Renderer renderer;
         public float createdGameTime;
 
         public float creationTime = 0.0f;
-        private readonly int maxPointSize = 200;
-        private readonly int minPointSize = 25;
+
+        private float internalMaelstrom;
         public float normalizedCreationTime;
-        private Vector2 velocity;
+        private Vector2 pixelMaxVelocity;
+        private Vector3 virtualPosition = Vector2.zero;
 
 
         public FeedDisplayObject(GameObject pointDisplay)
@@ -31,7 +34,7 @@ namespace Maelstrom.Unity
             material = renderer.material;
             minPointSize = Config.Get("feed_minPointSize", 25);
             maxPointSize = Config.Get("feed_maxPointSize", 200);
-            if (renderer == null) throw new Exception("Renderer not found on point display");
+            if (!renderer) throw new Exception("Renderer not found on point display");
         }
 
         public bool IsEnabled { get; private set; }
@@ -59,10 +62,10 @@ namespace Maelstrom.Unity
             var position = GetRandomPositionInCircle(circleCenter, circleRadius);
 
             // Velocity based on retweet count (normalized)
-            var velocityScale = 200 + dataPoint.normalizedRetweetCount * 50;
-            velocity = new Vector2(
-                (Random.value - 0.5f) * velocityScale,
-                (Random.value - 0.5f) * velocityScale
+            var velocityScale = 200 * (0.4f + 0.6f * maelstrom - 0.4f * dataPoint.normalizedRetweetCount);
+            pixelMaxVelocity = new Vector2(
+                velocityScale,
+                velocityScale
             );
 
             // Size based on retweet count (normalized)
@@ -70,43 +73,54 @@ namespace Maelstrom.Unity
             var pixelSize = new Vector2(sizeScale, sizeScale);
 
             // Set initial position and scale
-            gameObject.transform.position = position;
+            virtualPosition = position;
+            gameObject.transform.position = virtualPosition;
             gameObject.transform.localScale = pixelSize;
+
+            material.SetColor("_Color", new Color(1 - maelstrom, 1 - maelstrom, 1));
+            internalMaelstrom = maelstrom;
         }
 
         public void Update(float deltaTime, float maelstrom)
         {
-            if (gameObject != null)
-            {
-                var currentPosition = gameObject.transform.position;
-                var newPosition = currentPosition + new Vector3(velocity.x, velocity.y, 0) * deltaTime * 5f * maelstrom;
+            if (!gameObject) return;
 
-                // Check if object has moved outside current circle
-                var distanceFromCenter = Vector2.Distance(new Vector2(newPosition.x, newPosition.y), circleCenter);
+            var currentPosition = virtualPosition;
 
-                if (distanceFromCenter > circleRadius)
-                {
-                    velocity = -velocity;
-                    newPosition = currentPosition + new Vector3(velocity.x, velocity.y, 0) * deltaTime * 5f * maelstrom;
-                }
+            const float perlinScale = 800f;
+            var time = Time.time * (0.2f + maelstrom);
 
-                // Normal movement within circle
-                gameObject.transform.position = newPosition;
+            var noiseX = Mathf.PerlinNoise(
+                currentPosition.x / perlinScale + time,
+                currentPosition.y / perlinScale
+            ) * 2f - 1f;
 
-                material.SetColor("_Color", new Color(1 - maelstrom, 1 - maelstrom, 1));
-            }
+            var noiseY = Mathf.PerlinNoise(
+                currentPosition.x / perlinScale,
+                currentPosition.y / perlinScale + time
+            ) * 2f - 1f;
+
+            var noiseVelocity = new Vector2(noiseX, noiseY);
+
+            var translation = pixelMaxVelocity * noiseVelocity * deltaTime;
+
+            virtualPosition = currentPosition + new Vector3(translation.x, translation.y, 0);
+            gameObject.transform.position =
+                GetProjectedPositionInCircle(virtualPosition, circleCenter, circleRadius);
+            material.SetColor("_Color", new Color(1 - maelstrom, 1 - maelstrom, 1));
         }
+
 
         private void Reset()
         {
-            if (gameObject != null)
+            if (gameObject)
             {
                 gameObject.transform.position = Vector3.zero;
                 gameObject.transform.localScale = Vector3.one;
             }
 
             DataPoint = default;
-            velocity = Vector2.zero;
+            pixelMaxVelocity = Vector2.zero;
         }
 
         /// <summary>
@@ -114,14 +128,33 @@ namespace Maelstrom.Unity
         /// </summary>
         private Vector2 GetRandomPositionInCircle(Vector2 center, float radius)
         {
-            // Generate random angle and distance
-            var angle = Random.Range(0f, 2f * Mathf.PI);
-            var distance = Random.Range(radius / 5, radius);
+            return center + Random.insideUnitCircle * radius;
+        }
 
-            return center + new Vector2(
-                Mathf.Cos(angle) * distance,
-                Mathf.Sin(angle) * distance
+        private Vector3 GetProjectedPositionInCircle(
+            Vector3 virtualPosition,
+            Vector3 circleCenter,
+            float circleRadius)
+        {
+            // Work in XY plane only
+            var delta = new Vector2(
+                virtualPosition.x - circleCenter.x,
+                virtualPosition.y - circleCenter.y
             );
+
+            var distance = delta.magnitude;
+
+            // If exactly at center, return center (preserve original Z)
+            if (distance == 0f)
+                return new Vector3(circleCenter.x, circleCenter.y, virtualPosition.z);
+
+            // Radial modulo
+            var clampedDistance = Mathf.Min(distance, circleRadius);
+            var direction = delta / distance;
+            var projectedXY = (Vector2)circleCenter + direction * clampedDistance;
+
+
+            return new Vector3(projectedXY.x, projectedXY.y, virtualPosition.z);
         }
 
 
@@ -131,7 +164,7 @@ namespace Maelstrom.Unity
         public void SetEnabled(bool enabled)
         {
             IsEnabled = enabled;
-            if (gameObject != null) gameObject.SetActive(enabled);
+            if (gameObject) gameObject.SetActive(enabled);
         }
     }
 }

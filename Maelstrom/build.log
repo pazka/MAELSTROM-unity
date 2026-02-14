@@ -1,0 +1,24 @@
+[Licensing::Module] Trying to connect to existing licensing client channel...
+Built from '6000.2/respin/6000.2.8f1-e4064264ae96' branch; Version is '6000.2.8f1 (c9992ac36c34) revision 13211946'; Using compiler version '194234433'; Build Type 'Release'
+[Licensing::IpcConnector] Channel LicenseClient-Utilisateur doesn't exist
+OS: 'Windows 11  (10.0.26200) 64bit Professional' Language: 'en' Physical Memory: 31906 MB
+BatchMode: 1, IsHumanControllingUs: 0, StartBugReporterOnCrash: 0, Is64bit: 1
+Date: 2026-02-15T08:46:26Z
+[Licensing::Module] Successfully launched the LicensingClient (PId: 44344)
+
+COMMAND LINE ARGUMENTS:
+C:\Program Files\Unity\Hub\Editor\6000.2.8f1\Editor\Unity.exe
+-batchmode
+-quit
+-nographics
+-projectPath
+C:\Users\Utilisateur\Documents\dev\Maelstrom-unity\Maelstrom
+-executeMethod
+CommandLineBuild.BuildWindows
+-buildProfile=WindowsRelease
+-cleanBuild
+-logFile
+build.log
+Successfully changed project path to: C:\Users\Utilisateur\Documents\dev\Maelstrom-unity\Maelstrom
+C:/Users/Utilisateur/Documents/dev/Maelstrom-unity/Maelstrom
+Exiting without the bug reporter. Application will terminate with return code 1

@@ -97,7 +97,7 @@ namespace Maelstrom.Unity
             isMovingOutward = true;
 
             // Size based on followers count
-            var oneAccountSize = 5 * random + 5 + dataPoint.normalizedFollowersCount * 15;
+            var oneAccountSize = 5 + dataPoint.normalizedFollowersCount * 15;
             var size = dataPoint.isAggregated ? 2 : oneAccountSize;
             gameObject.transform.localScale = new Vector3(size, size, 0);
             material.SetColor("_Color", new Color(1 - maelstrom, 1 - maelstrom, 1));
