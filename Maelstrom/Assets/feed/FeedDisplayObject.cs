@@ -11,7 +11,7 @@ namespace Maelstrom.Unity
     {
         // Dual circle system
         private readonly Vector3 circleCenter = new(0, 540); // Center of first circle (1920x1080)
-        private readonly float circleRadius = 900; // Radius of each circle
+        private float circleRadius = 900; // Radius of each circle
         private readonly GameObject gameObject;
         private readonly Material material;
         private readonly int maxPointSize = 200;
@@ -34,6 +34,7 @@ namespace Maelstrom.Unity
             material = renderer.material;
             minPointSize = Config.Get("feed_minPointSize", 25);
             maxPointSize = Config.Get("feed_maxPointSize", 200);
+            circleRadius = Config.Get("feed_circleRadius", 900);
             if (!renderer) throw new Exception("Renderer not found on point display");
         }
 
