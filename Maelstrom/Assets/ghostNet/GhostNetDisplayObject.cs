@@ -15,6 +15,11 @@ namespace Maelstrom.Unity
         private Vector2 centerPosition;
         public float createdGameTime;
 
+
+        private float minOneAccSize = 3.0f;
+        private float oneAccSize = 6.0f;
+        private float aggAccSize = 1.0f;
+
         // Circular motion properties
         private float currentAngle;
         private float ellipseRotationAngle; // Random angle for elliptical rotation
@@ -30,6 +35,10 @@ namespace Maelstrom.Unity
             gameObject = ghostNetObject;
             material = ghostNetObject.GetComponent<Renderer>().material;
             if (material == null) throw new Exception("Material not found on ghost net object");
+
+            minOneAccSize = Config.Get("gn_minOneAccSize", 3f);
+            oneAccSize = Config.Get("gn_oneAccSize", 6f);
+            aggAccSize = Config.Get("gn_aggAccSize", 1f);
         }
 
         public bool IsEnabled { get; private set; }
@@ -97,8 +106,8 @@ namespace Maelstrom.Unity
             isMovingOutward = true;
 
             // Size based on followers count
-            var oneAccountSize = 5 + dataPoint.normalizedFollowersCount * 15;
-            var size = dataPoint.isAggregated ? 2 : oneAccountSize;
+            var oneAccountSize = minOneAccSize + dataPoint.normalizedFollowersCount * oneAccSize;
+            var size = dataPoint.isAggregated ? aggAccSize : oneAccountSize;
             gameObject.transform.localScale = new Vector3(size, size, 0);
             material.SetColor("_Color", new Color(1 - maelstrom, 1 - maelstrom, 1));
         }

@@ -2,8 +2,8 @@
   "loopDuration": 1200,
   "startPosition": 0.0,
   "centerPositionOffset": [
-    0.0,
-    0.0
+    65.0,
+    185.0
   ],
   "broadastIPv4Adress": "192.168.1.255",
   "multicastIPv6Adress": "ff02::1",
@@ -14,6 +14,11 @@
   "feed_minPointSize": 5,
   "feed_maxPointSize": 50,
   "feed_circleRadius": 700,
+  "gn_minOneAccSize": 3,
+  "gn_oneAccSize": 10,
+  "gn_aggAccSize": 1,
+  "gn_particleSize": 1,
+  "gn_particleMaelstromSize": 3,
   "maelstrom_transitionSteps": 550,
   "maelstrom_speedModifier": 1,
   "maelstrom_highPrevValueModifier": 3,

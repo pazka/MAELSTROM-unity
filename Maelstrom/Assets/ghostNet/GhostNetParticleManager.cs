@@ -28,11 +28,11 @@ namespace Maelstrom.Unity
             // Calculate number of particles to emit based on nb_tweets
             // Scale down the number to reasonable particle count (max 1000 particles)
             int particleCount = dataPoint.nb_tweets;
-            
+
             if (particleCount > 0)
             {
                 ConfigureParticleSystem(particles, particleCount, currentMaelstrom);
-                
+
                 AppLogger.Log($"Emitted {particleCount} particles for ##OTHERS## datapoint with {dataPoint.nb_tweets} tweets");
             }
         }
@@ -45,6 +45,8 @@ namespace Maelstrom.Unity
         /// <param name="currentMaelstrom">Current maelstrom value for particle properties</param>
         public static void ConfigureParticleSystem(ParticleSystem particles, int particleCount, float currentMaelstrom)
         {
+            var particleSize = Config.Get("gn_particleSize", 1f);
+            var particleMaelstromSize = Config.Get("gn_particleMaelstromSize", 3f);
             // Configure particle system for emission
             var emission = particles.emission;
             emission.enabled = true;
@@ -53,11 +55,11 @@ namespace Maelstrom.Unity
 
             // Set particle system properties based on maelstrom
             var main = particles.main;
-            main.startLifetime = 10.0f; // Longer lifetime with higher maelstrom
+            main.startLifetime = 10.0f;
             //main.duration = 10f;
             main.startSpeed = 65f + currentMaelstrom * 100f; // Faster particles with higher maelstrom
-            main.startSize = 2f + currentMaelstrom * 5f; // Larger particles with higher maelstrom
-            main.maxParticles = 10000; // Set max particles to prevent memory issues
+            main.startSize = particleSize + currentMaelstrom * particleMaelstromSize; // Larger particles with higher maelstrom
+            //main.maxParticles = 10000; // Set max particles to prevent memory issues
 
             // Set color based on maelstrom (similar to display objects)
             SetParticleColor(particles, currentMaelstrom);

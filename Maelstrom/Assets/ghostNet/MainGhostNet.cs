@@ -10,13 +10,15 @@ namespace Maelstrom.Unity
     /// </summary>
     public class MainGhostNet : MonoBehaviour
     {
-        [Header("Display Settings")] [SerializeField]
+        [Header("Display Settings")]
+        [SerializeField]
         private Vector2 screenSize = new(1920, 1080);
 
         [SerializeField] private GhostNetDisplayObjectPool displayObjectPool;
         [SerializeField] private ParticleSystemPool particlePool;
 
-        [Header("Data Settings")] [SerializeField]
+        [Header("Data Settings")]
+        [SerializeField]
         private GhostNetDataLoader dataLoader;
 
         [SerializeField] private PureDataConnector pureDataConnector;
