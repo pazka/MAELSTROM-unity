@@ -88,8 +88,8 @@ namespace Maelstrom.Unity
 
             var currentPosition = virtualPosition;
 
-            const float perlinScale = 800f;
-            var time = Time.time * (0.2f + maelstrom);
+            float perlinScale = 800f - maelstrom * maelstrom * 200f;
+            var time = Time.time * (0.05f + 0.85f * maelstrom * maelstrom);
 
             var noiseX = Mathf.PerlinNoise(
                 currentPosition.x / perlinScale + time,
@@ -108,7 +108,7 @@ namespace Maelstrom.Unity
             virtualPosition = currentPosition + new Vector3(translation.x, translation.y, 0);
             gameObject.transform.position =
                 GetProjectedPositionInCircle(virtualPosition, circleCenter, circleRadius);
-            material.SetColor("_Color", new Color(1 - maelstrom, 1 - maelstrom, 1));
+            //material.SetColor("_Color", new Color(1 - maelstrom, 1 - maelstrom, 1));
         }
 
 
