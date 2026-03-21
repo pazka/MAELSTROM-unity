@@ -11,7 +11,7 @@ namespace Maelstrom.Unity
     {
         // Dual circle system
         private readonly Vector3 circleCenter = new(0, 540); // Center of first circle (1920x1080)
-        private float circleRadius = 900; // Radius of each circle
+        private readonly float circleRadius = 900; // Radius of each circle
         private readonly GameObject gameObject;
         private readonly Material material;
         private readonly int maxPointSize = 200;
@@ -35,6 +35,9 @@ namespace Maelstrom.Unity
             minPointSize = Config.Get("feed_minPointSize", 25);
             maxPointSize = Config.Get("feed_maxPointSize", 200);
             circleRadius = Config.Get("feed_circleRadius", 900);
+            var centerOffset = Config.Get("centerPositionOffset", new[] { 0f, 0f });
+            circleCenter.x += +centerOffset[0];
+            circleCenter.y += +centerOffset[1];
             if (!renderer) throw new Exception("Renderer not found on point display");
         }
 
@@ -88,7 +91,7 @@ namespace Maelstrom.Unity
 
             var currentPosition = virtualPosition;
 
-            float perlinScale = 800f - maelstrom * maelstrom * 200f;
+            var perlinScale = 800f - maelstrom * maelstrom * 200f;
             var time = Time.time * (0.05f + 0.85f * maelstrom * maelstrom);
 
             var noiseX = Mathf.PerlinNoise(

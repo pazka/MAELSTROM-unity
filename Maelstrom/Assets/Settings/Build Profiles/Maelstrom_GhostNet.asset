@@ -22,9 +22,9 @@ MonoBehaviour:
   m_Scenes:
   - m_enabled: 0
     m_path: Assets/Scenes/FeedScene.unity
-  - m_enabled: 0
-    m_path: Assets/Scenes/CoralsScene.unity
   - m_enabled: 1
+    m_path: Assets/Scenes/CoralsScene.unity
+  - m_enabled: 0
     m_path: Assets/Scenes/GhostNetsScene.unity
   - m_enabled: 0
     m_path: Assets/Scenes/Global.unity
