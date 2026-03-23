@@ -19,7 +19,7 @@ MonoBehaviour:
     width: 1920
     height: 989
   m_ShowMode: 4
-  m_Title: Game
+  m_Title: Project
   m_RootView: {fileID: 2}
   m_MinSize: {x: 875, y: 300}
   m_MaxSize: {x: 10000, y: 10000}
@@ -120,7 +120,7 @@ MonoBehaviour:
   m_MinSize: {x: 400, y: 100}
   m_MaxSize: {x: 32384, y: 16192}
   vertical: 0
-  controlID: 19301
+  controlID: 112
   draggingID: 0
 --- !u!114 &6
 MonoBehaviour:
@@ -172,7 +172,7 @@ MonoBehaviour:
   m_MinSize: {x: 200, y: 100}
   m_MaxSize: {x: 16192, y: 16192}
   vertical: 1
-  controlID: 19302
+  controlID: 83
   draggingID: 0
 --- !u!114 &8
 MonoBehaviour:
@@ -198,7 +198,7 @@ MonoBehaviour:
   m_MinSize: {x: 200, y: 50}
   m_MaxSize: {x: 16192, y: 8096}
   vertical: 0
-  controlID: 19303
+  controlID: 75
   draggingID: 0
 --- !u!114 &9
 MonoBehaviour:
@@ -428,7 +428,7 @@ MonoBehaviour:
   m_Pos:
     serializedVersion: 2
     x: 0
-    y: 24
+    y: 79
     width: 234
     height: 907
   m_SerializedDataModeController:
@@ -453,7 +453,7 @@ MonoBehaviour:
     m_SkipHidden: 0
     m_SearchArea: 1
     m_Folders:
-    - Assets/Scenes
+    - Assets/common
     m_Globs: []
     m_ProductIds: 
     m_AnyWithAssetOrigin: 0
@@ -462,10 +462,9 @@ MonoBehaviour:
     m_FilterByTypeIntersection: 0
   m_ViewMode: 0
   m_StartGridSize: 64
-  m_LastFolders:
-  - Assets/ghostNet
+  m_LastFolders: []
   m_LastFoldersGridSize: -1
-  m_LastProjectPath: C:\Users\Utilisateur\Documents\dev\Maelstrom-unity\Maelstrom
+  m_LastProjectPath: C:\Users\Morille\Documents\alexMaelstrom\MAELSTROM-unity\Maelstrom
   m_LockTracker:
     m_IsLocked: 0
   m_FolderTreeState:
@@ -580,8 +579,8 @@ MonoBehaviour:
     m_TextWithWhitespace: "Hierarchy\u200B"
   m_Pos:
     serializedVersion: 2
-    x: 1
-    y: 24
+    x: 235
+    y: 79
     width: 284
     height: 537
   m_SerializedDataModeController:
@@ -598,9 +597,9 @@ MonoBehaviour:
   m_SceneHierarchy:
     m_TreeViewState:
       scrollPos: {x: 0, y: 0}
-      m_SelectedIDs: 
+      m_SelectedIDs: a89f0000
       m_LastClickedID: 0
-      m_ExpandedIDs: 66380ffc94fb1cfc74061dfc581f1dfc6a1f1dfc04221dfc260f2afce6e06efca4e16efc6aea6efc7cea6efc0ced6efcc8f56efcdaf56efc70f86efc68016ffc7a016ffc18046ffca40c6ffcb60c6ffc460f6ffcc0176ffcd2176ffc661a6ffcc2226ffcd4226ffc72256ffce0fea8fc3e4009fd084109fdf6de09fd967f99fdb6abb9fde4f1c8fd08e3fbfdb0a609fe84a709fe5ecd90feca11a4fe6415a4fe96d4b1feb4faffffead10000f0d10000d0130100a6170100
+      m_ExpandedIDs: d8faffff
       m_RenameOverlay:
         m_UserAcceptedRename: 0
         m_Name: 
@@ -646,8 +645,8 @@ MonoBehaviour:
     m_TextWithWhitespace: "Scene\u200B"
   m_Pos:
     serializedVersion: 2
-    x: 287
-    y: 24
+    x: 521
+    y: 79
     width: 924
     height: 537
   m_SerializedDataModeController:
@@ -1201,8 +1200,8 @@ MonoBehaviour:
     m_TextWithWhitespace: "Console\u200B"
   m_Pos:
     serializedVersion: 2
-    x: 1
-    y: 587
+    x: 235
+    y: 642
     width: 1210
     height: 344
   m_SerializedDataModeController:
@@ -1237,8 +1236,8 @@ MonoBehaviour:
     m_TextWithWhitespace: "Inspector\u200B"
   m_Pos:
     serializedVersion: 2
-    x: 1448
-    y: 24
+    x: 1447
+    y: 79
     width: 472
     height: 907
   m_SerializedDataModeController:
